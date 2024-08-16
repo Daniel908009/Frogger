@@ -10,13 +10,20 @@ def reset():
 
 # end screen function, currenlty very simple, will be updated later
 def end_screen():
+    global end_screen_active, score
+    end_screen_active = True
     end_screen = True
+    # writing the score to a file
+    write_score()
+    # end screen loop
     while end_screen:
+        # event checking
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 global running
                 running = False
                 end_screen = False
+        # background color, and texts
         screen.fill((255, 255, 255))
         text = font.render("Score: "+str(score), True, (0, 0, 0))
         screen.blit(text, (screen.get_width()/2 - text.get_width()/2, screen.get_height()/2 - text.get_height()/2))
@@ -26,62 +33,92 @@ def end_screen():
 
 # start screen function
 def start_screen():
-    pass
+    global running, start_screen_active
+    start_screen_font = pygame.font.Font(None, 100)
+    # start screen loop
+    while start_screen_active and running:
+        # event checking
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                start_screen_active = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    if screen.get_width()/2 - resized_play_button.get_width()/2 < event.pos[0] < screen.get_width()/2 + resized_play_button.get_width()/2 and screen.get_height()/2 - resized_play_button.get_height()/2 < event.pos[1] < screen.get_height()/2 + resized_play_button.get_height()/2:
+                        start_screen_active = False
+        # background color
+        screen.fill((255, 255, 255))
+
+        # main label
+        text = start_screen_font.render("Frogger", True, (0, 0, 0))
+        screen.blit(text, (screen.get_width()/2 - text.get_width()/2, text.get_height()))
+        # play button
+        screen.blit(resized_play_button, (screen.get_width()/2 - resized_play_button.get_width()/2, screen.get_height()/2 - resized_play_button.get_height()/2))
+        # updating the screen
+        pygame.display.update()
+
+# pause screen function
+def pause_screen():
+    global running, pause_screen_active
+    pause_screen_active = True
+    while pause_screen_active:
+        # event checking
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                pause_screen_active = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_p or event.key == pygame.K_q or event.key == pygame.K_m:
+                    pause_screen_active = False
+                elif event.key == pygame.K_r:
+                    pause_screen_active = False
+                    reset()
+        # background color
+        screen.fill((255, 255, 255))
+        # pause text
+        text = font.render("Paused", True, (0, 0, 0))
+        screen.blit(text, (screen.get_width()/2 - text.get_width()/2, screen.get_height()/2 - text.get_height()/2))
+        # help text
+        text1 = font.render("Press 'm' or 'p' or 'q' to continue", True, (0, 0, 0))
+        screen.blit(text1, (screen.get_width()/2 - text1.get_width()/2, screen.get_height()/2 - text.get_height()/2 + text1.get_height()))
+        # updating the screen
+        pygame.display.update()
 
 # spawn function for the obstacles and logs
 def spawn_func():
-    global running, obstacle_group, log_group, backgrounds_group
+    global running, obstacle_group, log_group, backgrounds_group, logs_to_spawn, obstacles_to_spawn, spawn_logs, spawn_obstacles, settings_window, pause_screen_active, quited
     clock = pygame.time.Clock()
-    while running:                                          # first attempt failed
-                                                     #    copy_obstacle_group = obstacle_group.copy()
-                                                     #    copy_log_group = log_group.copy()
-                                                     #    #print(len(obstacle_group))
-                                                     #    print(len(log_group))
-                                                     #    # for every row of obstacles, logs spawns another obstacle or log
-                                                     #    for log in copy_log_group:
-                                                     #        #print("log loop")
-                                                     #        # spawns a new log if there is less than 50 logs on the screen
-                                                     #        if len(log_group) < 50:
-                                                     #            new_log = Log(log.rect.y, log.direction, log.speed, log.initial_x)
-                                                     #            log_group.add(new_log)
-                                                     #            #print("spawned log")
-                                                     #    for obstacle in copy_obstacle_group:
-                                                     #        # spawns a new obstacle if there is less than 50 obstacles on the screen
-                                                     #        if len(obstacle_group) < 50:
-                                                     #            new_obstacle = Obstacle(obstacle.rect.y, obstacle.direction, obstacle.speed, obstacle.initial_x)
-                                                     #            obstacle_group.add(new_obstacle)
-                                                     #            #print("spawned obstacle")
-                                                                # spawns new obstacles and logs every couple of seconds
-                                                            #print("spawned check")
-
-    # I added coordinates to the background class, so that I can spawn obstacles and logs on the right place(hopefully this works)
-    # it does work, but it is not perfect, and can cause errors, however I have a solution for this(will be implemented later)
+    while running:
+        # checking if the end screen is active or if the start screen is active
+        while end_screen_active and running or start_screen_active and running or settings_window and running or pause_screen_active and running:
+            clock.tick(10)
+        # I added coordinates to the background class, so that I can spawn obstacles and logs on the right place(works)
         for background in backgrounds_group:
             temp = 0
+            # the actual spawning of the obstacles and logs is done in the main loop, this is to prevent a drawing error
             for i in background.coordinates:
-                if background.type == "road":
+                if background.type == "road" and background.rect.y < 600:
                     if temp % 2 == 0:
                         if len(obstacle_group) < 30:
-                            new_obstacle = Obstacle(i, "left", None, None)
-                            obstacle_group.add(new_obstacle)
+                            obstacles_to_spawn.append(Obstacle(i, "left", None, None))
+                            spawn_obstacles = True
                     else:
                         if len(obstacle_group) < 30:
-                            new_obstacle = Obstacle(i, "right", None, None)
-                            obstacle_group.add(new_obstacle)
-                elif background.type == "water":
+                            obstacles_to_spawn.append(Obstacle(i, "right", None, None))
+                            spawn_obstacles = True
+                elif background.type == "water" and background.rect.y < 600:
+                    #print(background.coordinates)
                     if temp % 2 == 0:
                         if len(log_group) < 30:
-                            new_log = Log(i, "left", None, None)
-                            log_group.add(new_log)
+                            logs_to_spawn.append(Log(i, "left", None, None))
+                            spawn_logs = True
                     else:
                         if len(log_group) < 30:
-                            new_log = Log(i, "right", None, None)
-                            log_group.add(new_log)
+                            logs_to_spawn.append(Log(i, "right", None, None))
+                            spawn_logs = True
                 temp += 1
-
-
-
         clock.tick(0.2)
+    quited = True
 
 
 # settings screen function
@@ -109,6 +146,26 @@ def settings_screen():
     apply_button.pack(side="bottom")
 
     window.mainloop()
+
+# function to write the score to a file, later will be used for highscores window
+def write_score():
+    global player_name, score
+    # first reading the file
+    try:
+        with open("scores.txt", "r") as file:
+            scores = file.readlines()
+        file.close()
+    except:
+        scores = []
+    # rearranging the scores from highest to lowest
+    scores.append(player_name+","+str(score)+"\n")
+    scores = sorted(scores, key=lambda x: int(x.split(",")[1]), reverse=True)
+    # writing the scores to the file
+    with open("scores.txt", "w") as file:
+        for i in scores:
+            file.write(i)
+    # closing the file
+    file.close()
 
 # Classes
 # Player class
@@ -153,7 +210,7 @@ class Player(pygame.sprite.Sprite):
 class Obstacle(pygame.sprite.Sprite):
     def __init__(self, y, direction, speed, x):
         super().__init__()
-        self.image = resized_obstacle
+        self.image = random.choice(resized_obstacles)
         self.rect = self.image.get_rect()
         self.rect.y = y
         if speed == None:
@@ -221,9 +278,6 @@ class Log(pygame.sprite.Sprite):
     
     def draw(self, screen):
         screen.blit(self.image, (self.rect.x, self.rect.y))
-    
-    def add_player(self):
-        self.has_player = True
 
 # background class
 class Background(pygame.sprite.Sprite):
@@ -286,31 +340,51 @@ player_image = pygame.image.load('frog.png')
 resized_player = pygame.transform.scale(player_image, (35, 35))
 player = Player()
 
-# creating a test obstacle
+# obstacle image
 obstacle_image = pygame.image.load('temporary_obstacle.png')
-resized_obstacle = pygame.transform.scale(obstacle_image, (100, 50))
+obstacle_image_red = pygame.image.load('temporary_obstacle_red.png')
+obstacle_image_yellow = pygame.image.load('temporary_obstacle_yellow.png')
+obstacle_image_purple = pygame.image.load('temporary_obstacle_purple.png')
+obstacle_image_pink = pygame.image.load('temporary_obstacle_pink.png')
+obstacle_image_blue = pygame.image.load('temporary_obstacle_blue.png')
+resized_obstacles = [pygame.transform.scale(obstacle_image, (100, 50)), pygame.transform.scale(obstacle_image_red, (100, 50)), pygame.transform.scale(obstacle_image_yellow, (100, 50)), pygame.transform.scale(obstacle_image_purple, (100, 50)), pygame.transform.scale(obstacle_image_pink, (100, 50)), pygame.transform.scale(obstacle_image_blue, (100, 50))]
 obstacle_group = pygame.sprite.Group()
 
-# creating a test log
+# log image
 log_image = pygame.image.load('log_temporary.png')
 resized_log = pygame.transform.scale(log_image, (100, 50))
 log_group = pygame.sprite.Group()
+
+# setting up a play button
+play_button = pygame.image.load('play_button.png')
+resized_play_button = pygame.transform.scale(play_button, (300, 100))
 
 # setting up a thread for the spawning of obstacles and logs
 spawn_thread = threading.Thread(target=spawn_func)
 
 # special settings
-invincible = True
+invincible = False
 
 # main loop
 running = True
+quited = False
 change_in_y = 0
 clock = pygame.time.Clock()
 coordinates = []
 score = 0
+spawn_logs, spawn_obstacles = False, False
+logs_to_spawn, obstacles_to_spawn = [], []
+on_water = 0
+end_screen_active, start_screen_active, settings_window, pause_screen_active = False, True, False, False
+player_name = "Player"
 # score font
 font = pygame.font.Font(None, 36)
 while running:
+
+    # showing the start screen
+    while start_screen_active:
+        start_screen()
+
     # starting the thread for the spawning of obstacles and logs
     if not spawn_thread.is_alive():
         spawn_thread.start()
@@ -331,6 +405,10 @@ while running:
                 player.change_direction("left")
             elif event.key == pygame.K_d or event.key == pygame.K_RIGHT:
                 player.change_direction("right")
+            elif event.key == pygame.K_r:
+                reset()
+            elif event.key == pygame.K_p or event.key == pygame.K_q or event.key == pygame.K_m:
+                pause_screen()
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_w or event.key == pygame.K_UP or event.key == pygame.K_SPACE or event.key == pygame.K_s or event.key == pygame.K_DOWN or event.key == pygame.K_a or event.key == pygame.K_LEFT or event.key == pygame.K_d or event.key == pygame.K_RIGHT:
                 player.change_direction("")
@@ -338,8 +416,12 @@ while running:
             if event.button == 1:
                 # checking if the settings button was clicked
                 if screen.get_width()-resized_settings_button.get_width() < event.pos[0] < screen.get_width() and 0 < event.pos[1] < resized_settings_button.get_height():
+                    settings_window = True
                     settings_screen()
     
+    # if the code reaches this point, the settings window must be closed
+    settings_window = False
+
     # checking if at least one background has y lower or equal to 0, if not, adding a new background
     temp = False
     back = None
@@ -366,14 +448,12 @@ while running:
 
     # removing obstacles that are out of the screen
     for obstacle in obstacle_group:
-        if obstacle.rect.x < screen.get_width()*-2 or obstacle.rect.x > screen.get_width()*2:
+        if obstacle.rect.x < screen.get_width()*-2 or obstacle.rect.x > screen.get_width()*2 or obstacle.rect.y > screen.get_height()+obstacle.rect.height:
             obstacle_group.remove(obstacle)
-            #print("removed obstacle")
     # removing logs that are out of the screen
     for log in log_group:
-        if log.rect.x < screen.get_width()*-2 or log.rect.x > screen.get_width()*2:
+        if log.rect.x < screen.get_width()*-2 or log.rect.x > screen.get_width()*2 or log.rect.y > screen.get_height()+log.rect.height:
             log_group.remove(log)
-            #print("removed log")
     
     # moving the player
     player.move()
@@ -420,25 +500,19 @@ while running:
 
     # checking if player is on a log
     if not any(log.has_player for log in log_group):
+        # checking for collisions between player and logs is now done through colission(its less buggy)
         for log in log_group:
-            if player.rect.x+player.rect.width < log.rect.x + log.rect.width and player.rect.x > log.rect.x:
-                if player.rect.y < log.rect.y + log.rect.height and player.rect.y + player.rect.height > log.rect.y:
-                    log.add_player()
-                else:
-                    log.has_player = False
+            if pygame.sprite.collide_rect(player, log):
+                log.has_player = True
             else:
                 log.has_player = False
     else:
         for log in log_group:
-            if log.has_player:
-                if player.rect.x+player.rect.width < log.rect.x + log.rect.width and player.rect.x > log.rect.x:
-                    if player.rect.y < log.rect.y + log.rect.height and player.rect.y + player.rect.height > log.rect.y:
-                        pass
-                    else:
-                        log.has_player = False
-                else:
-                    log.has_player = False
-        
+            if pygame.sprite.collide_rect(player, log):
+                print("player is on a log")
+            else:
+                log.has_player = False
+
     # checking if player is on a water background and not on a log
     if player.on_what == "water":
         temp = False
@@ -446,7 +520,13 @@ while running:
             if log.has_player:
                 temp = True
                 break
-        if not temp and not invincible:
+        # I complexified this, because this was the original solution, but it was buggy, however it can stay now as a double check
+        if temp:
+            on_water = 0
+        else:
+            on_water += 1
+        #print(on_water, temp)
+        if on_water == 2 and not invincible and not temp:
             end_screen()
 
     # checking for collisions between player and obstacles
@@ -454,7 +534,7 @@ while running:
         end_screen()
 
     # checking if player left the screen
-    if player.rect.x < 0 - resized_player.get_width() or player.rect.x > screen.get_width() and not invincible:
+    if player.rect.x < 0 - resized_player.get_width() and not invincible or player.rect.x > screen.get_width() and not invincible:
         end_screen()
 
     # updating the player(checking if the player is on a water background)
@@ -468,8 +548,23 @@ while running:
     fps = font.render(str(int(clock.get_fps())), True, (0, 0, 0))
     screen.blit(fps, (screen.get_width()-fps.get_width(), screen.get_height()-fps.get_height()))
 
+    # spawning the new obstacles and logs
+    if spawn_logs:
+        for log in logs_to_spawn:
+            log_group.add(log)
+        logs_to_spawn.clear()
+        spawn_logs = False
+    if spawn_obstacles:
+        for obstacle in obstacles_to_spawn:
+            obstacle_group.add(obstacle)
+        obstacles_to_spawn.clear()
+        spawn_obstacles = False
+
     # updating the screen and setting the frames per second
     clock.tick(60)
     pygame.display.update()
 
+# waiting for the thread to finish(this prevents an error when the code tryes to spawn an obstacle or log on a non existing window)
+while not quited:
+    pass
 pygame.quit()

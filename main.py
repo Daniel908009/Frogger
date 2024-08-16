@@ -1,6 +1,7 @@
 import pygame
 import random
 import tkinter as tk
+import threading
 
 # functions
 # reset function
@@ -27,6 +28,62 @@ def end_screen():
 def start_screen():
     pass
 
+# spawn function for the obstacles and logs
+def spawn_func():
+    global running, obstacle_group, log_group, backgrounds_group
+    clock = pygame.time.Clock()
+    while running:                                          # first attempt failed
+                                                     #    copy_obstacle_group = obstacle_group.copy()
+                                                     #    copy_log_group = log_group.copy()
+                                                     #    #print(len(obstacle_group))
+                                                     #    print(len(log_group))
+                                                     #    # for every row of obstacles, logs spawns another obstacle or log
+                                                     #    for log in copy_log_group:
+                                                     #        #print("log loop")
+                                                     #        # spawns a new log if there is less than 50 logs on the screen
+                                                     #        if len(log_group) < 50:
+                                                     #            new_log = Log(log.rect.y, log.direction, log.speed, log.initial_x)
+                                                     #            log_group.add(new_log)
+                                                     #            #print("spawned log")
+                                                     #    for obstacle in copy_obstacle_group:
+                                                     #        # spawns a new obstacle if there is less than 50 obstacles on the screen
+                                                     #        if len(obstacle_group) < 50:
+                                                     #            new_obstacle = Obstacle(obstacle.rect.y, obstacle.direction, obstacle.speed, obstacle.initial_x)
+                                                     #            obstacle_group.add(new_obstacle)
+                                                     #            #print("spawned obstacle")
+                                                                # spawns new obstacles and logs every couple of seconds
+                                                            #print("spawned check")
+
+    # I added coordinates to the background class, so that I can spawn obstacles and logs on the right place(hopefully this works)
+    # it does work, but it is not perfect, and can cause errors, however I have a solution for this(will be implemented later)
+        for background in backgrounds_group:
+            temp = 0
+            for i in background.coordinates:
+                if background.type == "road":
+                    if temp % 2 == 0:
+                        if len(obstacle_group) < 30:
+                            new_obstacle = Obstacle(i, "left", None, None)
+                            obstacle_group.add(new_obstacle)
+                    else:
+                        if len(obstacle_group) < 30:
+                            new_obstacle = Obstacle(i, "right", None, None)
+                            obstacle_group.add(new_obstacle)
+                elif background.type == "water":
+                    if temp % 2 == 0:
+                        if len(log_group) < 30:
+                            new_log = Log(i, "left", None, None)
+                            log_group.add(new_log)
+                    else:
+                        if len(log_group) < 30:
+                            new_log = Log(i, "right", None, None)
+                            log_group.add(new_log)
+                temp += 1
+
+
+
+        clock.tick(0.2)
+
+
 # settings screen function
 def settings_screen():
     window = tk.Tk()
@@ -52,29 +109,6 @@ def settings_screen():
     apply_button.pack(side="bottom")
 
     window.mainloop()
-
-# fill background function(adding obstacles or logs to the background)
-def fill_background(background):
-    # getting all the coordinates for placing the obstacles
-    coordinates = []
-    for i in range(background.rect.y, background.rect.y+ background.image.get_height(), 50):
-        coordinates.append(i)
-    # for now only adding logs to everything
-    temp= 0
-    for i in coordinates:
-        temp += 1
-        if temp % 2 == 0:
-            direction = "left"
-        else:
-            direction = "right"
-        if background.type == "water":
-            log = Log(i, direction)
-            log_group.add(log)
-        elif background.type == "road":
-            obstacle = Obstacle(i, direction)
-            obstacle_group.add(obstacle)
-        elif background.type == "grass":
-            pass
 
 # Classes
 # Player class
@@ -117,19 +151,30 @@ class Player(pygame.sprite.Sprite):
 
 # obstacle class
 class Obstacle(pygame.sprite.Sprite):
-    def __init__(self, y, direction):
+    def __init__(self, y, direction, speed, x):
         super().__init__()
         self.image = resized_obstacle
         self.rect = self.image.get_rect()
         self.rect.y = y
-        self.speed = random.randint(1, 3)
+        if speed == None:
+            self.speed = 1 # later this will be random maybe
+        else:
+            self.speed = speed
         self.direction = direction
-        if self.direction == "left":
-            self.rect.x = screen.get_width()+random.randint(0, obstacle_image.get_width()*2)
-            self.image = pygame.transform.flip(self.image, True, False)
-        elif self.direction == "right":
-            self.rect.x = 0 - self.rect.width - random.randint(0, obstacle_image.get_width()*2)
-    
+        if x == None:
+            if self.direction == "left":
+                self.rect.x = screen.get_width()+random.randint(0, obstacle_image.get_width())
+                self.image = pygame.transform.flip(self.image, True, False)
+            elif self.direction == "right":
+                self.rect.x = 0 - self.rect.width - random.randint(0, obstacle_image.get_width())
+        else:
+            self.rect.x = x
+            if self.direction == "left":
+                self.image = pygame.transform.flip(self.image, True, False)
+            elif self.direction == "right":
+                pass
+        self.initial_x = self.rect.x
+
     def move(self):
         if self.direction == "left":
             self.rect.x -= self.speed
@@ -142,18 +187,25 @@ class Obstacle(pygame.sprite.Sprite):
 
 # log class
 class Log(pygame.sprite.Sprite):
-    def __init__(self, y, direction):
+    def __init__(self, y, direction, speed ,x):
         super().__init__()
         self.image = resized_log
         self.rect = self.image.get_rect()
         self.rect.y = y
-        self.speed = random.randint(1, 3)
+        if speed == None:
+            self.speed = 1 # again will be random later maybe
+        else:
+            self.speed = speed
         self.direction = direction
-        if self.direction == "left":
-            self.rect.x = screen.get_width()+random.randint(0, log_image.get_width()*2)
-        elif self.direction == "right":
-            self.rect.x = 0 - self.rect.width - random.randint(0, log_image.get_width()*2)
+        if x == None:
+            if self.direction == "left":
+                self.rect.x = screen.get_width()+random.randint(0, log_image.get_width())
+            elif self.direction == "right":
+                self.rect.x = 0 - self.rect.width - random.randint(0, log_image.get_width())
+        else:
+            self.rect.x = x
         self.has_player = False
+        self.initial_x = self.rect.x
 
     def move(self):
         if self.direction == "left":
@@ -196,12 +248,21 @@ class Background(pygame.sprite.Sprite):
             self.rect.y = y
         else:
             self.rect.y = 0
+        self.coordinates = []
+        # getting all the coordinates for placing the obstacles
+        for i in range(self.rect.y, self.rect.y+ self.image.get_height(), 50):
+            self.coordinates.append(i)
 
     def draw(self, screen):
         screen.blit(self.image, (self.rect.x, self.rect.y))
     
     def move(self):
         self.rect.y = self.rect.y + change_in_y
+    
+    def update(self):
+        self.coordinates.clear()
+        for i in range(self.rect.y, self.rect.y+ self.image.get_height(), 50):
+            self.coordinates.append(i)
 
 # Initializing the pygame
 pygame.init()
@@ -235,14 +296,24 @@ log_image = pygame.image.load('log_temporary.png')
 resized_log = pygame.transform.scale(log_image, (100, 50))
 log_group = pygame.sprite.Group()
 
+# setting up a thread for the spawning of obstacles and logs
+spawn_thread = threading.Thread(target=spawn_func)
+
+# special settings
+invincible = True
+
 # main loop
 running = True
 change_in_y = 0
 clock = pygame.time.Clock()
+coordinates = []
 score = 0
 # score font
 font = pygame.font.Font(None, 36)
 while running:
+    # starting the thread for the spawning of obstacles and logs
+    if not spawn_thread.is_alive():
+        spawn_thread.start()
 
     # background color
     screen.fill((255, 255, 255))
@@ -287,8 +358,6 @@ while running:
         else:
             background1 = Background("grass", back.rect.y - 200, 200)
         backgrounds_group.add(background1)
-        # filling the background with obstacles or logs
-        fill_background(background1)
     
     # removing backgrounds that are out of the screen
     for background in backgrounds_group:
@@ -297,17 +366,14 @@ while running:
 
     # removing obstacles that are out of the screen
     for obstacle in obstacle_group:
-        if obstacle.rect.x < -obstacle.rect.width or obstacle.rect.x > screen.get_width():
-            new_obstacle = Obstacle(obstacle.rect.y, obstacle.direction)
+        if obstacle.rect.x < screen.get_width()*-2 or obstacle.rect.x > screen.get_width()*2:
             obstacle_group.remove(obstacle)
-            obstacle_group.add(new_obstacle)
-
+            #print("removed obstacle")
     # removing logs that are out of the screen
     for log in log_group:
-        if log.rect.x < -log.rect.width or log.rect.x > screen.get_width():
-            new_log = Log(log.rect.y, log.direction)
+        if log.rect.x < screen.get_width()*-2 or log.rect.x > screen.get_width()*2:
             log_group.remove(log)
-            log_group.add(new_log)
+            #print("removed log")
     
     # moving the player
     player.move()
@@ -334,12 +400,14 @@ while running:
     backgrounds_group.draw(screen)
 
                 # drawing everything
-    # drawing the obstacles
-    obstacle_group.draw(screen)
+    try:
+        # drawing the obstacles
+        obstacle_group.draw(screen)
 
-    # drawing the logs
-    log_group.draw(screen)
-
+        # drawing the logs
+        log_group.draw(screen)
+    except:
+        print("We hebben een serieus probleem")
     # drawing the player
     player.draw(screen)
 
@@ -351,15 +419,26 @@ while running:
     screen.blit(text, (0, 0))
 
     # checking if player is on a log
-    for log in log_group:
-        if player.rect.x+player.rect.width < log.rect.x + log.rect.width and player.rect.x > log.rect.x:
-            if player.rect.y < log.rect.y + log.rect.height and player.rect.y + player.rect.height > log.rect.y:
-                log.add_player()
+    if not any(log.has_player for log in log_group):
+        for log in log_group:
+            if player.rect.x+player.rect.width < log.rect.x + log.rect.width and player.rect.x > log.rect.x:
+                if player.rect.y < log.rect.y + log.rect.height and player.rect.y + player.rect.height > log.rect.y:
+                    log.add_player()
+                else:
+                    log.has_player = False
             else:
                 log.has_player = False
-        else:
-            log.has_player = False
-    
+    else:
+        for log in log_group:
+            if log.has_player:
+                if player.rect.x+player.rect.width < log.rect.x + log.rect.width and player.rect.x > log.rect.x:
+                    if player.rect.y < log.rect.y + log.rect.height and player.rect.y + player.rect.height > log.rect.y:
+                        pass
+                    else:
+                        log.has_player = False
+                else:
+                    log.has_player = False
+        
     # checking if player is on a water background and not on a log
     if player.on_what == "water":
         temp = False
@@ -367,19 +446,27 @@ while running:
             if log.has_player:
                 temp = True
                 break
-        if not temp:
+        if not temp and not invincible:
             end_screen()
 
     # checking for collisions between player and obstacles
-    if pygame.sprite.spritecollide(player, obstacle_group, False):
+    if pygame.sprite.spritecollide(player, obstacle_group, False) and not invincible:
         end_screen()
 
     # checking if player left the screen
-    if player.rect.x < 0 - resized_player.get_width() or player.rect.x > screen.get_width():
+    if player.rect.x < 0 - resized_player.get_width() or player.rect.x > screen.get_width() and not invincible:
         end_screen()
 
-    # just for testing
+    # updating the player(checking if the player is on a water background)
     player.update()
+
+    # updating the backgrounds
+    backgrounds_group.update()
+
+    # just for testing
+    # displaying fps
+    fps = font.render(str(int(clock.get_fps())), True, (0, 0, 0))
+    screen.blit(fps, (screen.get_width()-fps.get_width(), screen.get_height()-fps.get_height()))
 
     # updating the screen and setting the frames per second
     clock.tick(60)

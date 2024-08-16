@@ -44,7 +44,15 @@ def start_screen():
                 start_screen_active = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
+                    # checking play button
                     if screen.get_width()/2 - resized_play_button.get_width()/2 < event.pos[0] < screen.get_width()/2 + resized_play_button.get_width()/2 and screen.get_height()/2 - resized_play_button.get_height()/2 < event.pos[1] < screen.get_height()/2 + resized_play_button.get_height()/2:
+                        start_screen_active = False
+                    # checking scores button
+                    elif screen.get_width()/2 - resized_scores_button.get_width()/2 < event.pos[0] < screen.get_width()/2 + resized_scores_button.get_width()/2 and screen.get_height()/2 - resized_scores_button.get_height()/2 + resized_play_button.get_height() < event.pos[1] < screen.get_height()/2 + resized_scores_button.get_height()/2 + resized_play_button.get_height():
+                        scores_screen()
+                    # checking exit button
+                    elif screen.get_width()/2 - resized_end_game_button.get_width()/2 < event.pos[0] < screen.get_width()/2 + resized_end_game_button.get_width()/2 and screen.get_height()/2 - resized_end_game_button.get_height()/2 + resized_play_button.get_height() + resized_scores_button.get_height() < event.pos[1] < screen.get_height()/2 + resized_end_game_button.get_height()/2 + resized_play_button.get_height() + resized_scores_button.get_height():
+                        running = False
                         start_screen_active = False
         # background color
         screen.fill((255, 255, 255))
@@ -54,6 +62,10 @@ def start_screen():
         screen.blit(text, (screen.get_width()/2 - text.get_width()/2, text.get_height()))
         # play button
         screen.blit(resized_play_button, (screen.get_width()/2 - resized_play_button.get_width()/2, screen.get_height()/2 - resized_play_button.get_height()/2))
+        # scores button
+        screen.blit(resized_scores_button, (screen.get_width()/2 - resized_scores_button.get_width()/2, screen.get_height()/2 - resized_scores_button.get_height()/2 + resized_play_button.get_height()))
+        # exit button
+        screen.blit(resized_end_game_button, (screen.get_width()/2 - resized_end_game_button.get_width()/2, screen.get_height()/2 - resized_end_game_button.get_height()/2 + resized_play_button.get_height() + resized_scores_button.get_height()))
         # updating the screen
         pygame.display.update()
 
@@ -81,6 +93,52 @@ def pause_screen():
         # help text
         text1 = font.render("Press 'm' or 'p' or 'q' to continue", True, (0, 0, 0))
         screen.blit(text1, (screen.get_width()/2 - text1.get_width()/2, screen.get_height()/2 - text.get_height()/2 + text1.get_height()))
+        # updating the screen
+        pygame.display.update()
+
+# function to show the top scores
+def scores_screen():
+    global running, start_screen_active
+    # setting the font
+    score_font = pygame.font.Font(None, 40)
+    # label font
+    label_font = pygame.font.Font(None, 60)
+    # scores screen loop
+    while running:
+        # event checking
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                start_screen_active = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    # checking if the back arrow was clicked
+                    if 0 < event.pos[0] < resized_back_arrow.get_width() and 0 < event.pos[1] < resized_back_arrow.get_height():
+                        return
+        # background color
+        screen.fill((255, 255, 255))
+        # reading the scores from the file
+        try:
+            with open("scores.txt", "r") as file:
+                scores = file.readlines()
+            file.close()
+        except:
+            scores = []
+        # removing the \n from the scores
+        for i in range(len(scores)):
+            scores[i] = scores[i].replace("\n", "")
+        # main label
+        text = label_font.render("Top scores", True, (0, 0, 0))
+        screen.blit(text, (screen.get_width()/2 - text.get_width()/2, text.get_height()))
+        # back arrow
+        screen.blit(resized_back_arrow, (0, 0))
+        # displaying the first ten scores
+        for i in range(10):
+            try:
+                text1 = score_font.render(str(i+1)+". "+scores[i], True, (0, 0, 0))
+                screen.blit(text1, (screen.get_width()/2 - text1.get_width()/2, text.get_height()*2 + text1.get_height() + i*text1.get_height()))
+            except:
+                pass
         # updating the screen
         pygame.display.update()
 
@@ -117,9 +175,17 @@ def spawn_func():
                             logs_to_spawn.append(Log(i, "right", None, None))
                             spawn_logs = True
                 temp += 1
-        clock.tick(0.2)
+        if running:
+            clock.tick(0.2)
     quited = True
 
+# function to apply the settings
+def apply_settings(window, setting1,setting2):
+    global invincible
+    invincible = setting1
+    global back_wards_movement
+    back_wards_movement = setting2
+    window.destroy()
 
 # settings screen function
 def settings_screen():
@@ -134,15 +200,25 @@ def settings_screen():
     # creating a frame for the settings
     frame = tk.Frame(window)
     frame.pack()
-    # creating a label for the first setting
-    label1 = tk.Label(frame, text="Setting 1")
+    # creating a label for the invincible setting
+    label1 = tk.Label(frame, text="Invincible")
     label1.grid(row=0, column=0)
-    # creating a checkbutton for the first setting
-    checkbutton1 = tk.Checkbutton(frame)
+    # creating a checkbutton for the invincible setting
+    e1 = tk.BooleanVar()
+    e1.set(invincible)
+    checkbutton1 = tk.Checkbutton(frame, variable=e1)
     checkbutton1.grid(row=0, column=1)
+    # label for the back_wards_movement setting
+    label2 = tk.Label(frame, text="Backwards movement")
+    label2.grid(row=1, column=0)
+    # checkbutton for the back_wards_movement setting
+    e2 = tk.BooleanVar()
+    e2.set(back_wards_movement)
+    checkbutton2 = tk.Checkbutton(frame, variable=e2)
+    checkbutton2.grid(row=1, column=1)
 
     # creating a apply button
-    apply_button = tk.Button(window, text="Apply", command=lambda: window.destroy())# later this will call a function to apply the settings
+    apply_button = tk.Button(window, text="Apply", command=lambda: apply_settings(window, e1.get(), e2.get()))
     apply_button.pack(side="bottom")
 
     window.mainloop()
@@ -191,7 +267,7 @@ class Player(pygame.sprite.Sprite):
         global change_in_y
         if self.direction == "forward":
             change_in_y = self.speed
-        elif self.direction == "backward":
+        elif self.direction == "backward" and back_wards_movement:
             change_in_y = -self.speed
         elif self.direction == "left":
             self.rect.x -= self.speed
@@ -347,7 +423,14 @@ obstacle_image_yellow = pygame.image.load('temporary_obstacle_yellow.png')
 obstacle_image_purple = pygame.image.load('temporary_obstacle_purple.png')
 obstacle_image_pink = pygame.image.load('temporary_obstacle_pink.png')
 obstacle_image_blue = pygame.image.load('temporary_obstacle_blue.png')
-resized_obstacles = [pygame.transform.scale(obstacle_image, (100, 50)), pygame.transform.scale(obstacle_image_red, (100, 50)), pygame.transform.scale(obstacle_image_yellow, (100, 50)), pygame.transform.scale(obstacle_image_purple, (100, 50)), pygame.transform.scale(obstacle_image_pink, (100, 50)), pygame.transform.scale(obstacle_image_blue, (100, 50))]
+obstacle_image_green = pygame.image.load('temporary_obstacle_green.png')
+resized_obstacles = [pygame.transform.scale(obstacle_image, (100, 50)), 
+                     pygame.transform.scale(obstacle_image_red, (100, 50)), 
+                     pygame.transform.scale(obstacle_image_yellow, (100, 50)), 
+                     pygame.transform.scale(obstacle_image_purple, (100, 50)), 
+                     pygame.transform.scale(obstacle_image_pink, (100, 50)), 
+                     pygame.transform.scale(obstacle_image_blue, (100, 50)), 
+                     pygame.transform.scale(obstacle_image_green, (100, 50))]
 obstacle_group = pygame.sprite.Group()
 
 # log image
@@ -358,12 +441,21 @@ log_group = pygame.sprite.Group()
 # setting up a play button
 play_button = pygame.image.load('play_button.png')
 resized_play_button = pygame.transform.scale(play_button, (300, 100))
+scores_button = pygame.image.load('scores_button.png')
+resized_scores_button = pygame.transform.scale(scores_button, (300, 100))
+back_arrow = pygame.image.load('back_arrow.png')
+resized_back_arrow = pygame.transform.scale(back_arrow, (50, 50))
+end_game_button = pygame.image.load('exit_button.png')
+resized_end_game_button = pygame.transform.scale(end_game_button, (300, 100))
+home_button = pygame.image.load('home_button.png')
+resized_home_button = pygame.transform.scale(home_button, (50, 50))
 
 # setting up a thread for the spawning of obstacles and logs
 spawn_thread = threading.Thread(target=spawn_func)
 
 # special settings
 invincible = False
+back_wards_movement = True
 
 # main loop
 running = True
@@ -418,6 +510,9 @@ while running:
                 if screen.get_width()-resized_settings_button.get_width() < event.pos[0] < screen.get_width() and 0 < event.pos[1] < resized_settings_button.get_height():
                     settings_window = True
                     settings_screen()
+                # checking if the home button was clicked
+                elif screen.get_width()-resized_home_button.get_width() < event.pos[0] < screen.get_width() and resized_settings_button.get_height() < event.pos[1] < resized_settings_button.get_height() + resized_home_button.get_height():
+                    start_screen_active = True
     
     # if the code reaches this point, the settings window must be closed
     settings_window = False
@@ -494,6 +589,9 @@ while running:
     # drawing a settings button
     screen.blit(resized_settings_button, (screen.get_width()-resized_settings_button.get_width(), 0))
 
+    # drawing a home button
+    screen.blit(resized_home_button, (screen.get_width()-resized_home_button.get_width(), resized_settings_button.get_height()))
+
     # drawing the score in the top left corner
     text = font.render("Score: "+str(score), True, (255, 255, 255))
     screen.blit(text, (0, 0))
@@ -559,6 +657,20 @@ while running:
             obstacle_group.add(obstacle)
         obstacles_to_spawn.clear()
         spawn_obstacles = False
+    
+    # checking if a log or obstacle is touching another log or obstacle(this prevents a bug where the player could move twice as fast to the side by sitting on two logs at the same time)
+    # also this makes the game more playable
+    # they also have to check only the logs and obstacles on the same y coordinate
+    for log in log_group:
+        for log1 in log_group:
+            if log != log1:
+                if pygame.sprite.collide_rect(log, log1) and log.rect.y == log1.rect.y:
+                    log_group.remove(log)
+    for obstacle in obstacle_group:
+        for obstacle1 in obstacle_group:
+            if obstacle != obstacle1:
+                if pygame.sprite.collide_rect(obstacle, obstacle1) and obstacle.rect.y == obstacle1.rect.y:
+                    obstacle_group.remove(obstacle)
 
     # updating the screen and setting the frames per second
     clock.tick(60)

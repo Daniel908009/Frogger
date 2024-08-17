@@ -2,11 +2,26 @@ import pygame
 import random
 import tkinter as tk
 import threading
+from pygame import mixer
 
 # functions
 # reset function
 def reset():
-    pass
+    global obstacle_group, log_group, backgrounds_group, score, end_screen_active, player
+    # resetting the score
+    score = 0
+    # resetting the player
+    player.rect.x = screen.get_width() / 2 - player.rect.width / 2
+    player.rect.y = screen.get_height() - player.rect.height*2
+    # resetting the obstacles
+    obstacle_group.empty()
+    # resetting the logs
+    log_group.empty()
+    # resetting the backgrounds
+    backgrounds_group.empty()
+    # starting the game again
+    end_screen_active = False
+    # more will be added later(this version doesnt even work yet)
 
 # end screen function, currenlty very simple, will be updated later
 def end_screen():
@@ -35,6 +50,9 @@ def end_screen():
 def start_screen():
     global running, start_screen_active
     start_screen_font = pygame.font.Font(None, 100)
+    # starting the music
+    mixer.music.load('main_menu_music.mp3')
+    mixer.music.play(-1)
     # start screen loop
     while start_screen_active and running:
         # event checking
@@ -46,6 +64,9 @@ def start_screen():
                 if event.button == 1:
                     # checking play button
                     if screen.get_width()/2 - resized_play_button.get_width()/2 < event.pos[0] < screen.get_width()/2 + resized_play_button.get_width()/2 and screen.get_height()/2 - resized_play_button.get_height()/2 < event.pos[1] < screen.get_height()/2 + resized_play_button.get_height()/2:
+                        mixer.music.stop()
+                        mixer.music.load('beethoven-sonata.mp3')
+                        mixer.music.play(-1)
                         start_screen_active = False
                     # checking scores button
                     elif screen.get_width()/2 - resized_scores_button.get_width()/2 < event.pos[0] < screen.get_width()/2 + resized_scores_button.get_width()/2 and screen.get_height()/2 - resized_scores_button.get_height()/2 + resized_play_button.get_height() < event.pos[1] < screen.get_height()/2 + resized_scores_button.get_height()/2 + resized_play_button.get_height():
@@ -322,7 +343,11 @@ class Obstacle(pygame.sprite.Sprite):
 class Log(pygame.sprite.Sprite):
     def __init__(self, y, direction, speed ,x):
         super().__init__()
-        self.image = resized_log
+        rand = random.randint(0, 5)
+        if rand == 0:
+            self.image = water_images[1]
+        else:
+            self.image = water_images[0]
         self.rect = self.image.get_rect()
         self.rect.y = y
         if speed == None:
@@ -402,6 +427,12 @@ pygame.display.set_caption("Frogger")
 icon = pygame.image.load('frog.png')
 pygame.display.set_icon(icon)
 
+# setting up sounds
+splash_sound = mixer.Sound('splash_sound.mp3')
+game_over_sound = mixer.Sound('game_over_sound.mp3')
+power_up_pickup_sound = mixer.Sound('powerup_pickedup.mp3')
+car_horn_sound = mixer.Sound('car_horn.mp3')
+
 # creating the backgrounds
 backgrounds_group = pygame.sprite.Group()
 background = Background("grass", 600-100, None)
@@ -413,7 +444,7 @@ resized_settings_button = pygame.transform.scale(settings_button, (50, 50))
 
 # creating the player
 player_image = pygame.image.load('frog.png')
-resized_player = pygame.transform.scale(player_image, (35, 35))
+resized_player = pygame.transform.scale(player_image, (38, 38))
 player = Player()
 
 # obstacle image
@@ -434,8 +465,11 @@ resized_obstacles = [pygame.transform.scale(obstacle_image, (100, 50)),
 obstacle_group = pygame.sprite.Group()
 
 # log image
-log_image = pygame.image.load('log_temporary.png')
+log_image = pygame.image.load('log.png')
 resized_log = pygame.transform.scale(log_image, (100, 50))
+lilypad_image = pygame.image.load('waterlily.png')
+resized_lilypad = pygame.transform.scale(lilypad_image, (50, 50))
+water_images = [resized_log, resized_lilypad]
 log_group = pygame.sprite.Group()
 
 # setting up a play button
@@ -582,6 +616,7 @@ while running:
         # drawing the logs
         log_group.draw(screen)
     except:
+        # weirdly enough, this still sometimes happen, maybe when there is too much sprites?
         print("We hebben een serieus probleem")
     # drawing the player
     player.draw(screen)
@@ -607,7 +642,7 @@ while running:
     else:
         for log in log_group:
             if pygame.sprite.collide_rect(player, log):
-                print("player is on a log")
+                pass
             else:
                 log.has_player = False
 
@@ -623,16 +658,18 @@ while running:
             on_water = 0
         else:
             on_water += 1
-        #print(on_water, temp)
         if on_water == 2 and not invincible and not temp:
+            splash_sound.play()
             end_screen()
 
     # checking for collisions between player and obstacles
     if pygame.sprite.spritecollide(player, obstacle_group, False) and not invincible:
+        car_horn_sound.play()
         end_screen()
 
     # checking if player left the screen
     if player.rect.x < 0 - resized_player.get_width() and not invincible or player.rect.x > screen.get_width() and not invincible:
+        game_over_sound.play()
         end_screen()
 
     # updating the player(checking if the player is on a water background)
@@ -643,7 +680,7 @@ while running:
 
     # just for testing
     # displaying fps
-    fps = font.render(str(int(clock.get_fps())), True, (0, 0, 0))
+    fps = font.render(str(int(clock.get_fps())), True, (255, 0, 0))
     screen.blit(fps, (screen.get_width()-fps.get_width(), screen.get_height()-fps.get_height()))
 
     # spawning the new obstacles and logs
@@ -660,16 +697,32 @@ while running:
     
     # checking if a log or obstacle is touching another log or obstacle(this prevents a bug where the player could move twice as fast to the side by sitting on two logs at the same time)
     # also this makes the game more playable
-    # they also have to check only the logs and obstacles on the same y coordinate
+    # they also have to check only the logs and obstacles on a similar y coordinate
     for log in log_group:
         for log1 in log_group:
             if log != log1:
-                if pygame.sprite.collide_rect(log, log1) and log.rect.y == log1.rect.y:
+                # probably not the best way to do this, but hopefully it works(there is no simple way to check, however I think it makes sense)
+                tmp = False
+                #print(log.rect.y, log1.rect.y)
+                if abs(log.rect.y - log1.rect.y) < 48:
+                    tmp = True
+                    #print("some logs are on a similar y coordinate")
+                    #print(abs(log.rect.y - log1.rect.y))
+                # currently it also checks if they have the same direction, because otherwise its deleting just about every second log
+                if pygame.sprite.collide_rect(log, log1) and tmp and log.direction == log1.direction:
                     log_group.remove(log)
+                    print("this has done something")
+            else:
+                #print("same")
+                pass
+    # the same goes for the obstacles
     for obstacle in obstacle_group:
         for obstacle1 in obstacle_group:
             if obstacle != obstacle1:
-                if pygame.sprite.collide_rect(obstacle, obstacle1) and obstacle.rect.y == obstacle1.rect.y:
+                tmp = False
+                if abs(obstacle.rect.y - obstacle1.rect.y) < 48:
+                    tmp = True
+                if pygame.sprite.collide_rect(obstacle, obstacle1) and tmp and obstacle.direction == obstacle1.direction:
                     obstacle_group.remove(obstacle)
 
     # updating the screen and setting the frames per second

@@ -21,13 +21,48 @@ def reset():
     backgrounds_group.empty()
     # starting the game again
     end_screen_active = False
-    # more will be added later(this version doesnt even work yet)
+    # spawning the beginning background
+    background = Background("grass", 600-100, None)
+    backgrounds_group.add(background)
+    # resetting players attributes
+    player.on_what = None
+    player.direction = ""
+    # reseting important variables
+    global on_water, temp, change_in_y
+    on_water = 0
+    temp = False
+    change_in_y = 0
+
+    # starting the music again
+    mixer.music.load('beethoven-sonata.mp3')
+    mixer.music.play(-1)
 
 # end screen function, currenlty very simple, will be updated later
-def end_screen():
-    global end_screen_active, score
+def end_screen(death_type):
+    global end_screen_active, score, start_screen_active
     end_screen_active = True
     end_screen = True
+    # setting the end screen text based on the death type
+    if death_type == "water":
+        text1 = font.render("You drowned", True, (0, 0, 0))
+        joke = "How does a blonde kill a fish? She drowns it ..." # later the jokes will be randomised from a file
+    elif death_type == "car":
+        text1 = font.render("You got hit by a car", True, (0, 0, 0))
+        joke = "What do you call a Ford Fiesta that ran out of gas? A Ford Siesta." # later the jokes will be randomised from a file
+    elif death_type == "left":
+        text1 = font.render("You left the screen", True, (0, 0, 0))
+        joke = "The circus lion decided to quit because he felt trapped in his job."# later the jokes will be randomised from a file
+    
+    # resizing the text so it always fits the screen
+    joke_text = font.render(str(joke), True, (0, 0, 0))
+    while joke_text.get_width() > screen.get_width():
+        font1 = pygame.font.Font(None, font.size-1)
+        joke_text = font1.render(str(joke), True, (0, 0, 0))
+
+    # setting up the score text
+    text = font.render("Score: "+str(score), True, (0, 0, 0))
+    # stopping the music
+    mixer.music.stop()
     # writing the score to a file
     write_score()
     # end screen loop
@@ -38,12 +73,26 @@ def end_screen():
                 global running
                 running = False
                 end_screen = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    end_screen = False
+                    reset()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    # checking if the back arrow was clicked
+                    if 0 < event.pos[0] < resized_back_arrow.get_width() and 0 < event.pos[1] < resized_back_arrow.get_height():
+                        end_screen = False
+                        start_screen_active = True
         # background color, and texts
         screen.fill((255, 255, 255))
-        text = font.render("Score: "+str(score), True, (0, 0, 0))
+        # displaying the score
         screen.blit(text, (screen.get_width()/2 - text.get_width()/2, screen.get_height()/2 - text.get_height()/2))
-        text1 = font.render("You lost", True, (0, 0, 0))
+        # displaying the death text
         screen.blit(text1, (screen.get_width()/2 - text1.get_width()/2, screen.get_height()/2 - text1.get_height()/2 - text.get_height()))
+        # displaying the joke
+        screen.blit(joke_text, (screen.get_width()/2 - joke_text.get_width()/2, screen.get_height()/2 - joke_text.get_height()/2 + text.get_height()))
+        # displaying a back arrow
+        screen.blit(resized_back_arrow, (0, 0))
         pygame.display.update()
 
 # start screen function
@@ -68,6 +117,7 @@ def start_screen():
                         mixer.music.load('beethoven-sonata.mp3')
                         mixer.music.play(-1)
                         start_screen_active = False
+                        reset()
                     # checking scores button
                     elif screen.get_width()/2 - resized_scores_button.get_width()/2 < event.pos[0] < screen.get_width()/2 + resized_scores_button.get_width()/2 and screen.get_height()/2 - resized_scores_button.get_height()/2 + resized_play_button.get_height() < event.pos[1] < screen.get_height()/2 + resized_scores_button.get_height()/2 + resized_play_button.get_height():
                         scores_screen()
@@ -201,11 +251,13 @@ def spawn_func():
     quited = True
 
 # function to apply the settings
-def apply_settings(window, setting1,setting2):
+def apply_settings(window, setting1,setting2, setting3):
     global invincible
     invincible = setting1
     global back_wards_movement
     back_wards_movement = setting2
+    global show_fps
+    show_fps = setting3
     window.destroy()
 
 # settings screen function
@@ -237,9 +289,17 @@ def settings_screen():
     e2.set(back_wards_movement)
     checkbutton2 = tk.Checkbutton(frame, variable=e2)
     checkbutton2.grid(row=1, column=1)
+    # label for the show_fps setting
+    label3 = tk.Label(frame, text="Show fps")
+    label3.grid(row=2, column=0)
+    # checkbutton for the show_fps setting
+    e3 = tk.BooleanVar()
+    e3.set(show_fps)
+    checkbutton3 = tk.Checkbutton(frame, variable=e3)
+    checkbutton3.grid(row=2, column=1)
 
     # creating a apply button
-    apply_button = tk.Button(window, text="Apply", command=lambda: apply_settings(window, e1.get(), e2.get()))
+    apply_button = tk.Button(window, text="Apply", width=10,height=2, command=lambda: apply_settings(window, e1.get(), e2.get(), e3.get()))
     apply_button.pack(side="bottom")
 
     window.mainloop()
@@ -275,7 +335,9 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = screen.get_height() - self.rect.height*2
         self.speed = 5
         self.direction = ""
-        # finding out on what is the player standing
+        self.an_images = [resized_an_player1, resized_an_player2]
+        self.index = 0
+        # finding out on what is the player standing on
         self.on_what = None
         for background in backgrounds_group:
             if pygame.sprite.collide_rect(self, background):
@@ -296,7 +358,14 @@ class Player(pygame.sprite.Sprite):
             self.rect.x += self.speed
     
     def draw(self, screen):
-        screen.blit(self.image, (self.rect.x, self.rect.y))
+        global change_in_y
+        self.index +=0.1
+        if self.index >= 1.1:
+            self.index = 0
+        if change_in_y == 0:
+            screen.blit(self.image, (self.rect.x, self.rect.y))
+        else:
+            screen.blit(self.an_images[round(self.index)], (self.rect.x, self.rect.y))
 
     def update(self):
         for background in backgrounds_group:
@@ -433,10 +502,8 @@ game_over_sound = mixer.Sound('game_over_sound.mp3')
 power_up_pickup_sound = mixer.Sound('powerup_pickedup.mp3')
 car_horn_sound = mixer.Sound('car_horn.mp3')
 
-# creating the backgrounds
+# creating the backgrounds group
 backgrounds_group = pygame.sprite.Group()
-background = Background("grass", 600-100, None)
-backgrounds_group.add(background)
 
 # creating a settings button
 settings_button = pygame.image.load('settings.png')
@@ -445,6 +512,10 @@ resized_settings_button = pygame.transform.scale(settings_button, (50, 50))
 # creating the player
 player_image = pygame.image.load('frog.png')
 resized_player = pygame.transform.scale(player_image, (38, 38))
+an_player1 = pygame.image.load('frog1.png')
+resized_an_player1 = pygame.transform.scale(an_player1, (38,38))
+an_player2 = pygame.image.load('frog2.png')
+resized_an_player2 = pygame.transform.scale(an_player2, (38, 38))
 player = Player()
 
 # obstacle image
@@ -490,6 +561,7 @@ spawn_thread = threading.Thread(target=spawn_func)
 # special settings
 invincible = False
 back_wards_movement = True
+show_fps = True
 
 # main loop
 running = True
@@ -601,9 +673,6 @@ while running:
     
     # increasing the score
     score += change_in_y
-    
-    # resetting the change_in_y(if this is not done, the logs would never stop moving)
-    change_in_y = 0
 
     # background types drawing
     backgrounds_group.draw(screen)
@@ -618,8 +687,13 @@ while running:
     except:
         # weirdly enough, this still sometimes happen, maybe when there is too much sprites?
         print("We hebben een serieus probleem")
+
     # drawing the player
     player.draw(screen)
+
+    # resetting the change_in_y(if this is not done, the logs would never stop moving)
+    # this has to be done after drawing the player, since player.draw uses it
+    change_in_y = 0
 
     # drawing a settings button
     screen.blit(resized_settings_button, (screen.get_width()-resized_settings_button.get_width(), 0))
@@ -660,17 +734,17 @@ while running:
             on_water += 1
         if on_water == 2 and not invincible and not temp:
             splash_sound.play()
-            end_screen()
+            end_screen("water")
 
     # checking for collisions between player and obstacles
     if pygame.sprite.spritecollide(player, obstacle_group, False) and not invincible:
         car_horn_sound.play()
-        end_screen()
+        end_screen("car")
 
     # checking if player left the screen
     if player.rect.x < 0 - resized_player.get_width() and not invincible or player.rect.x > screen.get_width() and not invincible:
         game_over_sound.play()
-        end_screen()
+        end_screen("left")
 
     # updating the player(checking if the player is on a water background)
     player.update()
@@ -678,10 +752,10 @@ while running:
     # updating the backgrounds
     backgrounds_group.update()
 
-    # just for testing
     # displaying fps
-    fps = font.render(str(int(clock.get_fps())), True, (255, 0, 0))
-    screen.blit(fps, (screen.get_width()-fps.get_width(), screen.get_height()-fps.get_height()))
+    if show_fps:
+        fps = font.render(str(int(clock.get_fps())), True, (255, 0, 0))
+        screen.blit(fps, (screen.get_width()-fps.get_width(), screen.get_height()-fps.get_height()))
 
     # spawning the new obstacles and logs
     if spawn_logs:
@@ -703,17 +777,12 @@ while running:
             if log != log1:
                 # probably not the best way to do this, but hopefully it works(there is no simple way to check, however I think it makes sense)
                 tmp = False
-                #print(log.rect.y, log1.rect.y)
                 if abs(log.rect.y - log1.rect.y) < 48:
                     tmp = True
-                    #print("some logs are on a similar y coordinate")
-                    #print(abs(log.rect.y - log1.rect.y))
                 # currently it also checks if they have the same direction, because otherwise its deleting just about every second log
                 if pygame.sprite.collide_rect(log, log1) and tmp and log.direction == log1.direction:
                     log_group.remove(log)
-                    print("this has done something")
             else:
-                #print("same")
                 pass
     # the same goes for the obstacles
     for obstacle in obstacle_group:

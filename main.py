@@ -3,11 +3,12 @@ import random
 import tkinter as tk
 import threading
 from pygame import mixer
+#import time
 
 # functions
 # reset function
 def reset():
-    global obstacle_group, log_group, backgrounds_group, score, end_screen_active, player
+    global obstacle_group, log_group, backgrounds_group, score, end_screen_active, player, background_objects_group
     # resetting the score
     score = 0
     # resetting the player
@@ -19,6 +20,8 @@ def reset():
     log_group.empty()
     # resetting the backgrounds
     backgrounds_group.empty()
+    # resetting the background objects
+    background_objects_group.empty()
     # starting the game again
     end_screen_active = False
     # spawning the beginning background
@@ -42,22 +45,91 @@ def end_screen(death_type):
     global end_screen_active, score, start_screen_active
     end_screen_active = True
     end_screen = True
+    spliting = False
+    jokes = []
+    # reading the jokes from the file
+    temp = False
+    # setting up the check fraze
+    if death_type == "water":
+        check_fraze = "# water jokes"
+        other_check_frazes = ["# car jokes", "# leave jokes"]
+    elif death_type == "car":
+        check_fraze = "# car jokes"
+        other_check_frazes = ["# water jokes", "# leave jokes"]
+    elif death_type == "left":
+        check_fraze = "# leave jokes"
+        other_check_frazes = ["# water jokes", "# car jokes"]
+    # trying to read the jokes from the file
+    try:
+        with open("jokes.txt", "r") as file:
+            jokes_temp = file.readlines()
+            # checking if the file is empty
+            if jokes_temp == []:
+                jokes = ["Why did the frog cross the road? To get to the other side!"]
+            # deleting the \n from the jokes and the â€™(no idea where did that come from)
+            for i in range(len(jokes_temp)):
+                jokes_temp[i] = jokes_temp[i].replace("\n", "")
+                jokes_temp[i] = jokes_temp[i].replace("â€™", "")
+            # checking if the joke is the right type
+            #print(check_fraze)
+            #print(len(jokes_temp))
+            for line in jokes_temp:
+                if line == check_fraze:
+                    temp = True
+                if line == other_check_frazes[0] or line == other_check_frazes[1]:
+                    temp = False
+                if temp:
+                    jokes.append(line)
+        file.close()
+    except:
+        jokes = ["Why did the frog cross the road? To get to the other side!"]
+    # deleting the check frazes from the jokes
+    m = 0
+    for i in range(len(jokes)):
+        if jokes[i-m] == check_fraze or jokes[i-m] == other_check_frazes[0] or jokes[i-m] == other_check_frazes[1]:
+            jokes.pop(i)
+            m += 1
+
+    #print(jokes)
+    #print(len(jokes))
     # setting the end screen text based on the death type
     if death_type == "water":
         text1 = font.render("You drowned", True, (0, 0, 0))
-        joke = "How does a blonde kill a fish? She drowns it ..." # later the jokes will be randomised from a file
+        joke = random.choice(jokes)
     elif death_type == "car":
         text1 = font.render("You got hit by a car", True, (0, 0, 0))
-        joke = "What do you call a Ford Fiesta that ran out of gas? A Ford Siesta." # later the jokes will be randomised from a file
+        joke = random.choice(jokes)
     elif death_type == "left":
         text1 = font.render("You left the screen", True, (0, 0, 0))
-        joke = "The circus lion decided to quit because he felt trapped in his job."# later the jokes will be randomised from a file
+        joke = random.choice(jokes)
     
     # resizing the text so it always fits the screen
+    #print(joke + "joke selected")
     joke_text = font.render(str(joke), True, (0, 0, 0))
-    while joke_text.get_width() > screen.get_width():
-        font1 = pygame.font.Font(None, font.size-1)
-        joke_text = font1.render(str(joke), True, (0, 0, 0))
+    #print(joke_text.get_width())
+    # if a joke is too long, it will be split in half
+    if joke_text.get_width() > screen.get_width()*1.5:
+        # joke text is now a list of two texts
+        joke_text = [font.render(str(joke[:len(joke)//2]), True, (0, 0, 0)), font.render(str(joke[len(joke)//2:]), True, (0, 0, 0))]
+        spliting = True
+        #print("joke split")
+    
+    # resizing the joke text so it fits the screen
+    font1 = pygame.font.Font(None, 36)
+    i = 0
+    if not spliting:
+        while joke_text.get_width() > screen.get_width():
+            font1 = pygame.font.Font(None, font.size(joke)[1]-i)
+            joke_text = font1.render(str(joke), True, (0, 0, 0))
+            i += 1
+            #time.sleep(1)
+    elif spliting:
+        while joke_text[0].get_width() > screen.get_width() or joke_text[1].get_width() > screen.get_width():
+            font1 = pygame.font.Font(None, font.size(joke)[1]-i)
+            joke_text = [font1.render(str(joke[:len(joke)//2]), True, (0, 0, 0)), font1.render(str(joke[len(joke)//2:]), True, (0, 0, 0))]
+            i += 1
+            #time.sleep(1)
+            #print(joke_text[0].get_width())
 
     # setting up the score text
     text = font.render("Score: "+str(score), True, (0, 0, 0))
@@ -90,7 +162,11 @@ def end_screen(death_type):
         # displaying the death text
         screen.blit(text1, (screen.get_width()/2 - text1.get_width()/2, screen.get_height()/2 - text1.get_height()/2 - text.get_height()))
         # displaying the joke
-        screen.blit(joke_text, (screen.get_width()/2 - joke_text.get_width()/2, screen.get_height()/2 - joke_text.get_height()/2 + text.get_height()))
+        if not spliting:
+            screen.blit(joke_text, (screen.get_width()/2 - joke_text.get_width()/2, screen.get_height()/2 - joke_text.get_height()/2 + text.get_height()))
+        elif spliting:
+            screen.blit(joke_text[0], (screen.get_width()/2 - joke_text[0].get_width()/2, screen.get_height()/2 - joke_text[0].get_height()/2 + text.get_height()))
+            screen.blit(joke_text[1], (screen.get_width()/2 - joke_text[1].get_width()/2, screen.get_height()/2 - joke_text[1].get_height()/2 + text.get_height() + joke_text[0].get_height()))
         # displaying a back arrow
         screen.blit(resized_back_arrow, (0, 0))
         pygame.display.update()
@@ -324,6 +400,14 @@ def write_score():
     # closing the file
     file.close()
 
+# function to fill the grass background with some background objects
+def fill_with_objects(background):
+    global background_objects_group
+    # creating a random amount of objects at random places withing the background
+    for i in range(random.randint(1, 5)):
+        background_object = BackgroundObject(random.randint(0, screen.get_width()-50), random.randint(background.rect.y, background.rect.y+background.image.get_height()-50))
+        background_objects_group.add(background_object)
+
 # Classes
 # Player class
 class Player(pygame.sprite.Sprite):
@@ -371,6 +455,21 @@ class Player(pygame.sprite.Sprite):
         for background in backgrounds_group:
             if pygame.sprite.collide_rect(self, background):
                 self.on_what = background.type
+
+# background object class
+class BackgroundObject(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = random.choice(background_objects)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+    
+    def move(self):
+        self.rect.y = self.rect.y + change_in_y
+
+    def draw(self, screen):
+        screen.blit(self.image, (self.rect.x, self.rect.y))
 
 # obstacle class
 class Obstacle(pygame.sprite.Sprite):
@@ -476,6 +575,9 @@ class Background(pygame.sprite.Sprite):
         # getting all the coordinates for placing the obstacles
         for i in range(self.rect.y, self.rect.y+ self.image.get_height(), 50):
             self.coordinates.append(i)
+        # filling the grass background with background objects
+        if self.type == "grass":
+            fill_with_objects(self)
 
     def draw(self, screen):
         screen.blit(self.image, (self.rect.x, self.rect.y))
@@ -518,6 +620,17 @@ an_player2 = pygame.image.load('frog2.png')
 resized_an_player2 = pygame.transform.scale(an_player2, (38, 38))
 player = Player()
 
+# creating the background objects group
+background_objects_group = pygame.sprite.Group()
+# loading the background objects images
+stump_image = pygame.image.load('stump.png')
+resized_stump = pygame.transform.scale(stump_image, (50, 50))
+flower_image = pygame.image.load('flower.png')
+resized_flower = pygame.transform.scale(flower_image, (50, 50))
+stone_image = pygame.image.load('stone.png')
+resized_stone = pygame.transform.scale(stone_image, (50, 50))
+
+background_objects= [resized_stump, resized_flower, resized_stone]
 # obstacle image
 obstacle_image = pygame.image.load('temporary_obstacle.png')
 obstacle_image_red = pygame.image.load('temporary_obstacle_red.png')
@@ -655,6 +768,10 @@ while running:
     for log in log_group:
         if log.rect.x < screen.get_width()*-2 or log.rect.x > screen.get_width()*2 or log.rect.y > screen.get_height()+log.rect.height:
             log_group.remove(log)
+    # removing background objects that are out of the screen
+    for background_object in background_objects_group:
+        if background_object.rect.y > screen.get_height():
+            background_objects_group.remove(background_object)
     
     # moving the player
     player.move()
@@ -671,11 +788,18 @@ while running:
     for background in backgrounds_group:
         background.move()
     
+    # moving the background objects
+    for background_object in background_objects_group:
+        background_object.move()
+    
     # increasing the score
     score += change_in_y
 
     # background types drawing
     backgrounds_group.draw(screen)
+
+    # drawing the background objects
+    background_objects_group.draw(screen)
 
                 # drawing everything
     try:

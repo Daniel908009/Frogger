@@ -3,11 +3,55 @@ import random
 import tkinter as tk
 import threading
 from pygame import mixer
-#import time
 
 # functions
 # reset function
 def reset():
+    # getting the new one_game_unit
+    global one_game_unit
+    copy_of_unit = one_game_unit
+    one_game_unit = int(screen.get_height() / 12)
+    print(one_game_unit)
+    # here some more resizing of the window will be done, I am currently working on a solution(the problem is that some times the
+    # one_game_unit is a float, but because I convert it to an int there can be problems with where to spawn the obstacles and logs)
+
+        # resizing all the images
+    if one_game_unit != copy_of_unit:
+        # resizing the player
+        global resized_player, resized_an_player1, resized_an_player2
+        resized_player = pygame.transform.scale(player_image, (one_game_unit/1.5, one_game_unit/1.5))
+        resized_an_player1 = pygame.transform.scale(an_player1, (one_game_unit/1.5, one_game_unit/1.5))
+        resized_an_player2 = pygame.transform.scale(an_player2, (one_game_unit/1.5, one_game_unit/1.5))
+        # resizing the obstacles
+        global resized_obstacles
+        resized_obstacles = [pygame.transform.scale(obstacle_image, (one_game_unit*2, one_game_unit)),
+                                pygame.transform.scale(obstacle_image_red, (one_game_unit*2, one_game_unit)),
+                                pygame.transform.scale(obstacle_image_yellow, (one_game_unit*2, one_game_unit)),
+                                pygame.transform.scale(obstacle_image_purple, (one_game_unit*2, one_game_unit)),
+                                pygame.transform.scale(obstacle_image_pink, (one_game_unit*2, one_game_unit)),
+                                pygame.transform.scale(obstacle_image_blue, (one_game_unit*2, one_game_unit)),
+                                pygame.transform.scale(obstacle_image_green, (one_game_unit*2, one_game_unit))]
+        # resizing the background objects
+        global resized_stump, resized_flower, resized_stone, background_objects
+        resized_stump = pygame.transform.scale(stump_image, (one_game_unit, one_game_unit))
+        resized_flower = pygame.transform.scale(flower_image, (one_game_unit, one_game_unit))
+        resized_stone = pygame.transform.scale(stone_image, (one_game_unit, one_game_unit))
+        background_objects = [resized_stump, resized_flower, resized_stone]
+        # resizing the water images
+        global resized_log, resized_lilypad, water_images
+        resized_log = pygame.transform.scale(log_image, (one_game_unit*2, one_game_unit))
+        resized_lilypad = pygame.transform.scale(lilypad_image, (one_game_unit, one_game_unit))
+        water_images = [resized_log, resized_lilypad]
+        # resizing the buttons
+        global resized_play_button, resized_scores_button, resized_end_game_button, resized_back_arrow, resized_home_button, resized_settings_button
+        resized_play_button = pygame.transform.scale(play_button, (one_game_unit*6, one_game_unit*2))
+        resized_scores_button = pygame.transform.scale(scores_button, (one_game_unit*6, one_game_unit*2))
+        resized_end_game_button = pygame.transform.scale(end_game_button, (one_game_unit*6, one_game_unit*2))
+        resized_back_arrow = pygame.transform.scale(back_arrow, (one_game_unit, one_game_unit))
+        resized_home_button = pygame.transform.scale(home_button, (one_game_unit, one_game_unit))
+        resized_settings_button = pygame.transform.scale(settings_button, (one_game_unit, one_game_unit))
+
+    # resetting the obstacles and logs and etc.
     global obstacle_group, log_group, backgrounds_group, score, end_screen_active, player, background_objects_group
     # resetting the score
     score = 0
@@ -25,7 +69,7 @@ def reset():
     # starting the game again
     end_screen_active = False
     # spawning the beginning background
-    background = Background("grass", 600-100, None)
+    background = Background("grass", screen.get_height() - one_game_unit*2, None)
     backgrounds_group.add(background)
     # resetting players attributes
     player.on_what = None
@@ -71,8 +115,6 @@ def end_screen(death_type):
                 jokes_temp[i] = jokes_temp[i].replace("\n", "")
                 jokes_temp[i] = jokes_temp[i].replace("â€™", "")
             # checking if the joke is the right type
-            #print(check_fraze)
-            #print(len(jokes_temp))
             for line in jokes_temp:
                 if line == check_fraze:
                     temp = True
@@ -89,9 +131,6 @@ def end_screen(death_type):
         if jokes[i-m] == check_fraze or jokes[i-m] == other_check_frazes[0] or jokes[i-m] == other_check_frazes[1]:
             jokes.pop(i)
             m += 1
-
-    #print(jokes)
-    #print(len(jokes))
     # setting the end screen text based on the death type
     if death_type == "water":
         text1 = font.render("You drowned", True, (0, 0, 0))
@@ -104,32 +143,26 @@ def end_screen(death_type):
         joke = random.choice(jokes)
     
     # resizing the text so it always fits the screen
-    #print(joke + "joke selected")
     joke_text = font.render(str(joke), True, (0, 0, 0))
-    #print(joke_text.get_width())
     # if a joke is too long, it will be split in half
     if joke_text.get_width() > screen.get_width()*1.5:
         # joke text is now a list of two texts
         joke_text = [font.render(str(joke[:len(joke)//2]), True, (0, 0, 0)), font.render(str(joke[len(joke)//2:]), True, (0, 0, 0))]
         spliting = True
-        #print("joke split")
     
     # resizing the joke text so it fits the screen
-    font1 = pygame.font.Font(None, 36)
+    font1 = pygame.font.Font(None, screen.get_height()//12)
     i = 0
     if not spliting:
         while joke_text.get_width() > screen.get_width():
             font1 = pygame.font.Font(None, font.size(joke)[1]-i)
             joke_text = font1.render(str(joke), True, (0, 0, 0))
             i += 1
-            #time.sleep(1)
     elif spliting:
         while joke_text[0].get_width() > screen.get_width() or joke_text[1].get_width() > screen.get_width():
             font1 = pygame.font.Font(None, font.size(joke)[1]-i)
             joke_text = [font1.render(str(joke[:len(joke)//2]), True, (0, 0, 0)), font1.render(str(joke[len(joke)//2:]), True, (0, 0, 0))]
             i += 1
-            #time.sleep(1)
-            #print(joke_text[0].get_width())
 
     # setting up the score text
     text = font.render("Score: "+str(score), True, (0, 0, 0))
@@ -174,7 +207,7 @@ def end_screen(death_type):
 # start screen function
 def start_screen():
     global running, start_screen_active
-    start_screen_font = pygame.font.Font(None, 100)
+    start_screen_font = pygame.font.Font(None, screen.get_height()//6)
     # starting the music
     mixer.music.load('main_menu_music.mp3')
     mixer.music.play(-1)
@@ -247,9 +280,9 @@ def pause_screen():
 def scores_screen():
     global running, start_screen_active
     # setting the font
-    score_font = pygame.font.Font(None, 40)
+    score_font = pygame.font.Font(None, screen.get_height()//12)
     # label font
-    label_font = pygame.font.Font(None, 60)
+    label_font = pygame.font.Font(None, screen.get_height()//6)
     # scores screen loop
     while running:
         # event checking
@@ -302,25 +335,20 @@ def spawn_func():
             temp = 0
             # the actual spawning of the obstacles and logs is done in the main loop, this is to prevent a drawing error
             for i in background.coordinates:
-                if background.type == "road" and background.rect.y < 600:
+                if background.type == "road" and background.rect.y < screen.get_height():
                     if temp % 2 == 0:
-                        if len(obstacle_group) < 30:
-                            obstacles_to_spawn.append(Obstacle(i, "left", None, None))
-                            spawn_obstacles = True
+                        obstacles_to_spawn.append(Obstacle(i, "left", None, None))
+                        spawn_obstacles = True
                     else:
-                        if len(obstacle_group) < 30:
-                            obstacles_to_spawn.append(Obstacle(i, "right", None, None))
-                            spawn_obstacles = True
-                elif background.type == "water" and background.rect.y < 600:
-                    #print(background.coordinates)
+                        obstacles_to_spawn.append(Obstacle(i, "right", None, None))
+                        spawn_obstacles = True
+                elif background.type == "water" and background.rect.y < screen.get_height():
                     if temp % 2 == 0:
-                        if len(log_group) < 30:
-                            logs_to_spawn.append(Log(i, "left", None, None))
-                            spawn_logs = True
+                        logs_to_spawn.append(Log(i, "left", None, None))
+                        spawn_logs = True
                     else:
-                        if len(log_group) < 30:
-                            logs_to_spawn.append(Log(i, "right", None, None))
-                            spawn_logs = True
+                        logs_to_spawn.append(Log(i, "right", None, None))
+                        spawn_logs = True
                 temp += 1
         if running:
             clock.tick(0.2)
@@ -404,9 +432,14 @@ def write_score():
 def fill_with_objects(background):
     global background_objects_group
     # creating a random amount of objects at random places withing the background
-    for i in range(random.randint(1, 5)):
-        background_object = BackgroundObject(random.randint(0, screen.get_width()-50), random.randint(background.rect.y, background.rect.y+background.image.get_height()-50))
-        background_objects_group.add(background_object)
+    if background.image.get_height() == one_game_unit*4:
+        for i in range(random.randint(1, 5)):
+            background_object = BackgroundObject(random.randint(0, screen.get_width()-one_game_unit), random.randint(background.rect.y, background.rect.y+background.image.get_height()-one_game_unit))
+            background_objects_group.add(background_object)
+    elif background.image.get_height() == one_game_unit*12:
+        for i in range(random.randint(3, 10)):
+            background_object = BackgroundObject(random.randint(0, screen.get_width()-one_game_unit), random.randint(background.rect.y, background.rect.y+background.image.get_height()-one_game_unit))
+            background_objects_group.add(background_object)
 
 # Classes
 # Player class
@@ -485,17 +518,18 @@ class Obstacle(pygame.sprite.Sprite):
         self.direction = direction
         if x == None:
             if self.direction == "left":
-                self.rect.x = screen.get_width()+random.randint(0, obstacle_image.get_width())
+                # self.rect.x has to be a little bigger, so that the cars can be deleted in the main code if they are on top of each other
+                self.rect.x = screen.get_width()+random.randint(one_game_unit//5, obstacle_image.get_width())
                 self.image = pygame.transform.flip(self.image, True, False)
             elif self.direction == "right":
-                self.rect.x = 0 - self.rect.width - random.randint(0, obstacle_image.get_width())
+                # self.rect.x has to be a little bigger, so that the cars can be deleted in the main code if they are on top of each other
+                self.rect.x = 0 - self.rect.width - random.randint(one_game_unit//5, obstacle_image.get_width())
         else:
             self.rect.x = x
             if self.direction == "left":
                 self.image = pygame.transform.flip(self.image, True, False)
             elif self.direction == "right":
                 pass
-        self.initial_x = self.rect.x
 
     def move(self):
         if self.direction == "left":
@@ -525,9 +559,11 @@ class Log(pygame.sprite.Sprite):
         self.direction = direction
         if x == None:
             if self.direction == "left":
-                self.rect.x = screen.get_width()+random.randint(0, log_image.get_width())
+                # self.rect.x has to be a little bigger, so that the cars can be deleted in the main code if they are on top of each other
+                self.rect.x = screen.get_width()+random.randint(one_game_unit//5, log_image.get_width())
             elif self.direction == "right":
-                self.rect.x = 0 - self.rect.width - random.randint(0, log_image.get_width())
+                # self.rect.x has to be a little bigger, so that the cars can be deleted in the main code if they are on top of each other
+                self.rect.x = 0 - self.rect.width - random.randint(one_game_unit//5, log_image.get_width())
         else:
             self.rect.x = x
         self.has_player = False
@@ -557,14 +593,14 @@ class Background(pygame.sprite.Sprite):
         else:
             self.type = type
         if height != None:
-            self.image = pygame.transform.scale(pygame.image.load('grass.png'), (800, height))
+            self.image = pygame.transform.scale(pygame.image.load('grass.png'), (screen.get_width(), height))
         else:
             if self.type == "road":
-                self.image = pygame.transform.scale(pygame.image.load('road.png'), (800, 600))
+                self.image = pygame.transform.scale(pygame.image.load('road.png'), (screen.get_width(), screen.get_height()))
             elif self.type == "water":
-                self.image = pygame.transform.scale(pygame.image.load('water.png'), (800, 600))
+                self.image = pygame.transform.scale(pygame.image.load('water.png'), (screen.get_width(), screen.get_height()))
             elif self.type == "grass":
-                self.image = pygame.transform.scale(pygame.image.load('grass.png'), (800, 600))
+                self.image = pygame.transform.scale(pygame.image.load('grass.png'), (screen.get_width(), screen.get_height()))
         self.rect = self.image.get_rect()
         self.rect.x = 0
         if y != None:
@@ -573,8 +609,9 @@ class Background(pygame.sprite.Sprite):
             self.rect.y = 0
         self.coordinates = []
         # getting all the coordinates for placing the obstacles
-        for i in range(self.rect.y, self.rect.y+ self.image.get_height(), 50):
+        for i in range(self.rect.y, self.rect.y+ self.image.get_height(), one_game_unit):
             self.coordinates.append(i)
+        #print(self.coordinates)
         # filling the grass background with background objects
         if self.type == "grass":
             fill_with_objects(self)
@@ -587,16 +624,21 @@ class Background(pygame.sprite.Sprite):
     
     def update(self):
         self.coordinates.clear()
-        for i in range(self.rect.y, self.rect.y+ self.image.get_height(), 50):
+        for i in range(self.rect.y, self.rect.y+ self.image.get_height(), one_game_unit):
             self.coordinates.append(i)
 
 # Initializing the pygame
 pygame.init()
 # setting up the screen
-screen = pygame.display.set_mode((800, 600))
+resizability = True
+if resizability:
+    screen = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
+else:
+    screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Frogger")
 icon = pygame.image.load('frog.png')
 pygame.display.set_icon(icon)
+one_game_unit = int(screen.get_height() / 12)
 
 # setting up sounds
 splash_sound = mixer.Sound('splash_sound.mp3')
@@ -609,26 +651,26 @@ backgrounds_group = pygame.sprite.Group()
 
 # creating a settings button
 settings_button = pygame.image.load('settings.png')
-resized_settings_button = pygame.transform.scale(settings_button, (50, 50))
+resized_settings_button = pygame.transform.scale(settings_button, (one_game_unit, one_game_unit))
 
 # creating the player
 player_image = pygame.image.load('frog.png')
-resized_player = pygame.transform.scale(player_image, (38, 38))
+resized_player = pygame.transform.scale(player_image, (one_game_unit/1.5, one_game_unit/1.5))
 an_player1 = pygame.image.load('frog1.png')
-resized_an_player1 = pygame.transform.scale(an_player1, (38,38))
+resized_an_player1 = pygame.transform.scale(an_player1, (one_game_unit/1.5, one_game_unit/1.5))
 an_player2 = pygame.image.load('frog2.png')
-resized_an_player2 = pygame.transform.scale(an_player2, (38, 38))
+resized_an_player2 = pygame.transform.scale(an_player2, (one_game_unit/1.5, one_game_unit/1.5))
 player = Player()
 
 # creating the background objects group
 background_objects_group = pygame.sprite.Group()
 # loading the background objects images
 stump_image = pygame.image.load('stump.png')
-resized_stump = pygame.transform.scale(stump_image, (50, 50))
+resized_stump = pygame.transform.scale(stump_image, (one_game_unit, one_game_unit))
 flower_image = pygame.image.load('flower.png')
-resized_flower = pygame.transform.scale(flower_image, (50, 50))
+resized_flower = pygame.transform.scale(flower_image, (one_game_unit,one_game_unit))
 stone_image = pygame.image.load('stone.png')
-resized_stone = pygame.transform.scale(stone_image, (50, 50))
+resized_stone = pygame.transform.scale(stone_image, (one_game_unit, one_game_unit))
 
 background_objects= [resized_stump, resized_flower, resized_stone]
 # obstacle image
@@ -639,34 +681,34 @@ obstacle_image_purple = pygame.image.load('temporary_obstacle_purple.png')
 obstacle_image_pink = pygame.image.load('temporary_obstacle_pink.png')
 obstacle_image_blue = pygame.image.load('temporary_obstacle_blue.png')
 obstacle_image_green = pygame.image.load('temporary_obstacle_green.png')
-resized_obstacles = [pygame.transform.scale(obstacle_image, (100, 50)), 
-                     pygame.transform.scale(obstacle_image_red, (100, 50)), 
-                     pygame.transform.scale(obstacle_image_yellow, (100, 50)), 
-                     pygame.transform.scale(obstacle_image_purple, (100, 50)), 
-                     pygame.transform.scale(obstacle_image_pink, (100, 50)), 
-                     pygame.transform.scale(obstacle_image_blue, (100, 50)), 
-                     pygame.transform.scale(obstacle_image_green, (100, 50))]
+resized_obstacles = [pygame.transform.scale(obstacle_image, (one_game_unit*2, one_game_unit)), 
+                     pygame.transform.scale(obstacle_image_red, (one_game_unit*2, one_game_unit)), 
+                     pygame.transform.scale(obstacle_image_yellow, (one_game_unit*2, one_game_unit)), 
+                     pygame.transform.scale(obstacle_image_purple, (one_game_unit*2, one_game_unit)), 
+                     pygame.transform.scale(obstacle_image_pink, (one_game_unit*2, one_game_unit)), 
+                     pygame.transform.scale(obstacle_image_blue, (one_game_unit*2, one_game_unit)), 
+                     pygame.transform.scale(obstacle_image_green, (one_game_unit*2, one_game_unit))]
 obstacle_group = pygame.sprite.Group()
 
 # log image
 log_image = pygame.image.load('log.png')
-resized_log = pygame.transform.scale(log_image, (100, 50))
+resized_log = pygame.transform.scale(log_image, (one_game_unit*2, one_game_unit))
 lilypad_image = pygame.image.load('waterlily.png')
-resized_lilypad = pygame.transform.scale(lilypad_image, (50, 50))
+resized_lilypad = pygame.transform.scale(lilypad_image, (one_game_unit, one_game_unit))
 water_images = [resized_log, resized_lilypad]
 log_group = pygame.sprite.Group()
 
 # setting up a play button
 play_button = pygame.image.load('play_button.png')
-resized_play_button = pygame.transform.scale(play_button, (300, 100))
+resized_play_button = pygame.transform.scale(play_button, (one_game_unit*6, one_game_unit*2))
 scores_button = pygame.image.load('scores_button.png')
-resized_scores_button = pygame.transform.scale(scores_button, (300, 100))
+resized_scores_button = pygame.transform.scale(scores_button, (one_game_unit*6, one_game_unit*2))
 back_arrow = pygame.image.load('back_arrow.png')
-resized_back_arrow = pygame.transform.scale(back_arrow, (50, 50))
+resized_back_arrow = pygame.transform.scale(back_arrow, (one_game_unit, one_game_unit))
 end_game_button = pygame.image.load('exit_button.png')
-resized_end_game_button = pygame.transform.scale(end_game_button, (300, 100))
+resized_end_game_button = pygame.transform.scale(end_game_button, (one_game_unit*6, one_game_unit*2))
 home_button = pygame.image.load('home_button.png')
-resized_home_button = pygame.transform.scale(home_button, (50, 50))
+resized_home_button = pygame.transform.scale(home_button, (one_game_unit, one_game_unit))
 
 # setting up a thread for the spawning of obstacles and logs
 spawn_thread = threading.Thread(target=spawn_func)
@@ -689,7 +731,7 @@ on_water = 0
 end_screen_active, start_screen_active, settings_window, pause_screen_active = False, True, False, False
 player_name = "Player"
 # score font
-font = pygame.font.Font(None, 36)
+font = pygame.font.Font(None, screen.get_height()//12)
 while running:
 
     # showing the start screen
@@ -747,12 +789,12 @@ while running:
 
     if not temp and back != None:
         if back.type == "grass":
-            if back.image.get_height() == 200:
-                background1 = Background(None, back.rect.y - 600, None)
+            if back.image.get_height() == one_game_unit*4:
+                background1 = Background(None, back.rect.y - screen.get_height(), None)
             else:
                 background1 = Background(None, back.rect.y - back.image.get_height(), None)
         else:
-            background1 = Background("grass", back.rect.y - 200, 200)
+            background1 = Background("grass", back.rect.y - one_game_unit*4, one_game_unit*4)
         backgrounds_group.add(background1)
     
     # removing backgrounds that are out of the screen
@@ -885,6 +927,7 @@ while running:
     if spawn_logs:
         for log in logs_to_spawn:
             log_group.add(log)
+            print(log.image.get_height())
         logs_to_spawn.clear()
         spawn_logs = False
     if spawn_obstacles:
@@ -901,10 +944,14 @@ while running:
             if log != log1:
                 # probably not the best way to do this, but hopefully it works(there is no simple way to check, however I think it makes sense)
                 tmp = False
-                if abs(log.rect.y - log1.rect.y) < 48:
+                tmp1 = False
+                if abs(log.rect.y - log1.rect.y) < log.rect.height-2:
                     tmp = True
+                # this ensures that the deleting happens only outside of players view
+                if log.rect.x < 0 and log1.rect.x < 0 or log.rect.x > screen.get_width() and log1.rect.x > screen.get_width():
+                    tmp1 = True
                 # currently it also checks if they have the same direction, because otherwise its deleting just about every second log
-                if pygame.sprite.collide_rect(log, log1) and tmp and log.direction == log1.direction:
+                if pygame.sprite.collide_rect(log, log1) and tmp and log.direction == log1.direction and tmp1:
                     log_group.remove(log)
             else:
                 pass
@@ -913,9 +960,14 @@ while running:
         for obstacle1 in obstacle_group:
             if obstacle != obstacle1:
                 tmp = False
-                if abs(obstacle.rect.y - obstacle1.rect.y) < 48:
+                tmp1 = False
+                if abs(obstacle.rect.y - obstacle1.rect.y) < obstacle.rect.height-2:
                     tmp = True
-                if pygame.sprite.collide_rect(obstacle, obstacle1) and tmp and obstacle.direction == obstacle1.direction:
+                # this ensures that the deleting happens only outside of players view
+                if obstacle.rect.x < 0 and obstacle1.rect.x < 0 or obstacle.rect.x > screen.get_width() and obstacle1.rect.x > screen.get_width():
+                    tmp1 = True
+                    #print(obstacle.rect.x, obstacle1.rect.x)
+                if pygame.sprite.collide_rect(obstacle, obstacle1) and tmp and obstacle.direction == obstacle1.direction and tmp1:
                     obstacle_group.remove(obstacle)
 
     # updating the screen and setting the frames per second

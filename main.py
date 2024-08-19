@@ -40,7 +40,6 @@ def reset():
         player.image = resized_player
         player.an_images = [resized_an_player1, resized_an_player2]
         player.rect = player.image.get_rect()
-        #print(player.image.get_width(), player.image.get_height())
         # resizing the obstacles
         global resized_obstacles
         resized_obstacles = [pygame.transform.scale(obstacle_image, (one_game_unit*2, one_game_unit)),
@@ -51,12 +50,14 @@ def reset():
                                 pygame.transform.scale(obstacle_image_blue, (one_game_unit*2, one_game_unit)),
                                 pygame.transform.scale(obstacle_image_green, (one_game_unit*2, one_game_unit))]
         # resizing the background objects
-        global resized_stump, resized_flower, resized_stone,resized_logs, background_objects
+        global resized_stump, resized_flower, resized_stone,resized_logs, resized_pond, resized_snake,background_objects
         resized_stump = pygame.transform.scale(stump_image, (one_game_unit, one_game_unit))
         resized_flower = pygame.transform.scale(flower_image, (one_game_unit, one_game_unit))
         resized_stone = pygame.transform.scale(stone_image, (one_game_unit, one_game_unit))
         resized_logs = pygame.transform.scale(logs_image, (one_game_unit, one_game_unit))
-        background_objects = [resized_stump, resized_flower, resized_stone, resized_logs]
+        resized_snake = pygame.transform.scale(snake_image, (one_game_unit, one_game_unit))
+        resized_pond = pygame.transform.scale(pond_image, (one_game_unit, one_game_unit))
+        background_objects = [resized_stump, resized_flower, resized_stone, resized_logs, resized_pond, resized_snake]
         # resizing the water images
         global resized_log, resized_lilypad, water_images
         resized_log = pygame.transform.scale(log_image, (one_game_unit*2, one_game_unit))
@@ -106,7 +107,7 @@ def reset():
 
 # end screen function, currenlty very simple, will be updated later
 def end_screen(death_type):
-    global end_screen_active, score, start_screen_active
+    global end_screen_active, score, start_screen_active, save_score
     end_screen_active = True
     end_screen = True
     spliting = False
@@ -189,7 +190,8 @@ def end_screen(death_type):
     # stopping the music
     mixer.music.stop()
     # writing the score to a file
-    write_score()
+    if save_score:
+        write_score()
     # end screen loop
     while end_screen:
         # event checking
@@ -226,7 +228,7 @@ def end_screen(death_type):
 
 # start screen function
 def start_screen():
-    global running, start_screen_active, player
+    global running, start_screen_active, invincible
     start_screen_font = pygame.font.Font(None, screen.get_height()//6)
     # starting the music
     mixer.music.load('main_menu_music.mp3')
@@ -236,11 +238,8 @@ def start_screen():
         # event checking
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                # player has to be put in the middle of the screen, to prevent a bug with the end screen appearing after the game is closed
-                # basicaly the bug appears because the main loop does one more iteration after the game is closed
-                # so if the player died by leaving the screen, it could trigger the end screen again when he closed the game
-                player.rect.y = screen.get_height() - player.rect.height*2
-                player.rect.x = screen.get_width() / 2 - player.rect.width / 2
+                # this fixes a bug where player could die after quitting the game
+                invincible = True
                 running = False
                 start_screen_active = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -257,9 +256,8 @@ def start_screen():
                         scores_screen()
                     # checking exit button
                     elif screen.get_width()/2 - resized_end_game_button.get_width()/2 < event.pos[0] < screen.get_width()/2 + resized_end_game_button.get_width()/2 and screen.get_height()/2 - resized_end_game_button.get_height()/2 + resized_play_button.get_height() + resized_scores_button.get_height() < event.pos[1] < screen.get_height()/2 + resized_end_game_button.get_height()/2 + resized_play_button.get_height() + resized_scores_button.get_height():
-                        # has to be here because of the same bug as the one mentioned above
-                        player.rect.y = screen.get_height() - player.rect.height*2
-                        player.rect.x = screen.get_width() / 2 - player.rect.width / 2
+                        # this fixes a bug where player could die after quitting the game
+                        invincible = True
                         running = False
                         start_screen_active = False
         # background color
@@ -316,10 +314,9 @@ def scores_screen():
         # event checking
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                # this also fixes the same bug as in the start screen(explanation is there)
-                global player
-                player.rect.y = screen.get_height() - player.rect.height*2
-                player.rect.x = screen.get_width() / 2 - player.rect.width / 2
+                # this fixes a bug where player could die after quitting the game
+                global invincible
+                invincible = True
                 running = False
                 start_screen_active = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -383,14 +380,14 @@ def spawn_func():
                         spawn_logs = True
                 temp += 1
                 #using y sort(this creates a sort of 3D effect) it will be barely usefull, but it is a nice touch
-                # it is done here because its the only place where the group can be regularly sorted
+                # it is done here because its the only place where the group can be regularly sorted while not slowing down the game
                 background_objects_group = pygame.sprite.Group(sorted(background_objects_group, key=lambda x: x.rect.y))
         if running:
             clock.tick(0.2)
     quited = True
 
 # function to apply the settings
-def apply_settings(window, invincible1, back_wards_movement1, show_fps1, name):
+def apply_settings(window, invincible1, back_wards_movement1, show_fps1, name, saving):
     global invincible
     invincible = invincible1
     global back_wards_movement
@@ -400,6 +397,8 @@ def apply_settings(window, invincible1, back_wards_movement1, show_fps1, name):
     global player_name
     if name != "":
         player_name = name
+    global save_score
+    save_score = saving
     window.destroy()
 
 # settings screen function
@@ -445,9 +444,17 @@ def settings_screen():
     # entry for the name setting
     e4 = tk.Entry(frame)
     e4.grid(row=3, column=1)
+    # label for save_score setting
+    label5 = tk.Label(frame, text="Save score")
+    label5.grid(row=4, column=0)
+    # checkbutton for the save_score setting
+    e5 = tk.BooleanVar()
+    e5.set(save_score)
+    checkbutton5 = tk.Checkbutton(frame, variable=e5)
+    checkbutton5.grid(row=4, column=1)
 
     # creating a apply button
-    apply_button = tk.Button(window, text="Apply", width=10,height=2, command=lambda: apply_settings(window, e1.get(), e2.get(), e3.get(), e4.get()))
+    apply_button = tk.Button(window, text="Apply", width=10,height=2, command=lambda: apply_settings(window, e1.get(), e2.get(), e3.get(), e4.get(), e5.get()))
     apply_button.pack(side="bottom")
 
     window.mainloop()
@@ -657,6 +664,7 @@ class Log(pygame.sprite.Sprite):
             self.rect.x -= self.speed
         elif self.direction == "right":
             self.rect.x += self.speed
+        # if the log has a player on it, then the player will move along with the log
         if self.has_player:
             if self.direction == "left":
                 player.rect.x -= self.speed
@@ -760,8 +768,12 @@ stone_image = pygame.image.load('stone.png')
 resized_stone = pygame.transform.scale(stone_image, (one_game_unit, one_game_unit))
 logs_image = pygame.image.load('background_logs.png')
 resized_logs = pygame.transform.scale(logs_image, (one_game_unit, one_game_unit))
+snake_image = pygame.image.load('snake.png')
+resized_snake = pygame.transform.scale(snake_image, (one_game_unit, one_game_unit))
+pond_image = pygame.image.load('pond.png')
+resized_pond = pygame.transform.scale(pond_image, (one_game_unit, one_game_unit))
 
-background_objects= [resized_stump, resized_flower, resized_stone, resized_logs]
+background_objects= [resized_stump, resized_flower, resized_stone, resized_logs, resized_snake, resized_pond]
 # obstacle image
 obstacle_image = pygame.image.load('temporary_obstacle.png') # they are not temporary anymore, but I am too lazy to change the names
 obstacle_image_red = pygame.image.load('temporary_obstacle_red.png')# they are not temporary anymore, but I am too lazy to change the names
@@ -805,7 +817,8 @@ spawn_thread = threading.Thread(target=spawn_func)
 # special settings
 invincible = False
 back_wards_movement = True
-show_fps = True
+show_fps = False
+save_score = True
 
 # main loop
 running = True
@@ -1043,8 +1056,7 @@ while running:
                 # currently it also checks if they have the same direction, because otherwise its deleting just about every second log
                 if pygame.sprite.collide_rect(log, log1) and tmp and log.direction == log1.direction and tmp1:
                     log_group.remove(log)
-            else:
-                pass
+
     # the same goes for the obstacles
     for obstacle in obstacle_group:
         for obstacle1 in obstacle_group:
@@ -1063,7 +1075,8 @@ while running:
     clock.tick(60)
     pygame.display.update()
 
-# waiting for the thread to finish(this prevents an error when the code tryes to spawn an obstacle or log on a non existing window)
+# waiting for the thread to finish(this prevents an error when the code tries to spawn an obstacle or log on a non existing window)
 while not quited:
     pass
+
 pygame.quit()

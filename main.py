@@ -226,7 +226,7 @@ def end_screen(death_type):
 
 # start screen function
 def start_screen():
-    global running, start_screen_active
+    global running, start_screen_active, player
     start_screen_font = pygame.font.Font(None, screen.get_height()//6)
     # starting the music
     mixer.music.load('main_menu_music.mp3')
@@ -236,6 +236,11 @@ def start_screen():
         # event checking
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                # player has to be put in the middle of the screen, to prevent a bug with the end screen appearing after the game is closed
+                # basicaly the bug appears because the main loop does one more iteration after the game is closed
+                # so if the player died by leaving the screen, it could trigger the end screen again when he closed the game
+                player.rect.y = screen.get_height() - player.rect.height*2
+                player.rect.x = screen.get_width() / 2 - player.rect.width / 2
                 running = False
                 start_screen_active = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -252,6 +257,9 @@ def start_screen():
                         scores_screen()
                     # checking exit button
                     elif screen.get_width()/2 - resized_end_game_button.get_width()/2 < event.pos[0] < screen.get_width()/2 + resized_end_game_button.get_width()/2 and screen.get_height()/2 - resized_end_game_button.get_height()/2 + resized_play_button.get_height() + resized_scores_button.get_height() < event.pos[1] < screen.get_height()/2 + resized_end_game_button.get_height()/2 + resized_play_button.get_height() + resized_scores_button.get_height():
+                        # has to be here because of the same bug as the one mentioned above
+                        player.rect.y = screen.get_height() - player.rect.height*2
+                        player.rect.x = screen.get_width() / 2 - player.rect.width / 2
                         running = False
                         start_screen_active = False
         # background color
@@ -308,6 +316,10 @@ def scores_screen():
         # event checking
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                # this also fixes the same bug as in the start screen(explanation is there)
+                global player
+                player.rect.y = screen.get_height() - player.rect.height*2
+                player.rect.x = screen.get_width() / 2 - player.rect.width / 2
                 running = False
                 start_screen_active = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -344,7 +356,7 @@ def scores_screen():
 
 # spawn function for the obstacles and logs
 def spawn_func():
-    global running, obstacle_group, log_group, backgrounds_group, logs_to_spawn, obstacles_to_spawn, spawn_logs, spawn_obstacles, settings_window, pause_screen_active, quited
+    global running, obstacle_group, log_group, backgrounds_group, logs_to_spawn, obstacles_to_spawn, spawn_logs, spawn_obstacles, settings_window, pause_screen_active, quited, background_objects_group
     clock = pygame.time.Clock()
     while running:
         # checking if the end screen is active or if the start screen is active
@@ -357,19 +369,22 @@ def spawn_func():
             for i in background.coordinates:
                 if background.type == "road" and background.rect.y < screen.get_height():
                     if temp % 2 == 0:
-                        obstacles_to_spawn.append(Obstacle(i, "left", background))
+                        obstacles_to_spawn.append(Obstacle(i, "left", background, None))
                         spawn_obstacles = True
                     else:
-                        obstacles_to_spawn.append(Obstacle(i, "right", background))
+                        obstacles_to_spawn.append(Obstacle(i, "right", background, None))
                         spawn_obstacles = True
                 elif background.type == "water" and background.rect.y < screen.get_height():
                     if temp % 2 == 0:
-                        logs_to_spawn.append(Log(i, "left", background))
+                        logs_to_spawn.append(Log(i, "left", background, None))
                         spawn_logs = True
                     else:
-                        logs_to_spawn.append(Log(i, "right", background))
+                        logs_to_spawn.append(Log(i, "right", background, None))
                         spawn_logs = True
                 temp += 1
+                #using y sort(this creates a sort of 3D effect) it will be barely usefull, but it is a nice touch
+                # it is done here because its the only place where the group can be regularly sorted
+                background_objects_group = pygame.sprite.Group(sorted(background_objects_group, key=lambda x: x.rect.y))
         if running:
             clock.tick(0.2)
     quited = True
@@ -472,8 +487,26 @@ def fill_with_objects(background):
 
 # function to fill the background with some obstacles or logs when the background is created
 def filling_back(background):
-    # will be done later...
-    pass
+    global obstacles_to_spawn, logs_to_spawn, spawn_obstacles, spawn_logs
+    # for every y row in the background, there will be between 1 obstacle or log spawned at the edge of the screen
+    temp = 0
+    # the actual spawning of the obstacles and logs is done in the main loop, this is to prevent a drawing error
+    for i in background.coordinates:
+        if background.type == "road" and background.rect.y < screen.get_height():
+            if temp % 2 == 0:
+                obstacles_to_spawn.append(Obstacle(i, "left", background, screen.get_width()))
+                spawn_obstacles = True
+            else:
+                obstacles_to_spawn.append(Obstacle(i, "right", background, 0))
+                spawn_obstacles = True
+        elif background.type == "water" and background.rect.y < screen.get_height():
+            if temp % 2 == 0:
+                logs_to_spawn.append(Log(i, "left", background, screen.get_width()))
+                spawn_logs = True
+            else:
+                logs_to_spawn.append(Log(i, "right", background, 0))
+                spawn_logs = True
+        temp += 1
 
 # Classes
 # Player class
@@ -540,7 +573,7 @@ class BackgroundObject(pygame.sprite.Sprite):
 
 # obstacle class
 class Obstacle(pygame.sprite.Sprite):
-    def __init__(self, y, direction, background):
+    def __init__(self, y, direction, background, x):
         super().__init__()
         self.image = random.choice(resized_obstacles)
         self.rect = self.image.get_rect()
@@ -548,11 +581,17 @@ class Obstacle(pygame.sprite.Sprite):
         self.direction = direction
         if self.direction == "left":
             # self.rect.x has to be a little bigger, so that the cars can be deleted in the main code if they are on top of each other
-            self.rect.x = screen.get_width()+random.randint(one_game_unit//5, obstacle_image.get_width())
+            if x == None:
+                self.rect.x = screen.get_width()+random.randint(one_game_unit//5, obstacle_image.get_width())
+            else:
+                self.rect.x = x
             self.image = pygame.transform.flip(self.image, True, False)
         elif self.direction == "right":
             # self.rect.x has to be a little bigger, so that the cars can be deleted in the main code if they are on top of each other
-            self.rect.x = 0 - self.rect.width - random.randint(one_game_unit//5, obstacle_image.get_width())
+            if x == None:
+                self.rect.x = 0 - self.rect.width - random.randint(one_game_unit//5, obstacle_image.get_width())
+            else:
+                self.rect.x = x
         # setting the speed of the obstacle based on the background selected speed for the specific y coordinate
         # the same as for the logs
         for i in range(len(background.coordinates)):
@@ -577,7 +616,7 @@ class Obstacle(pygame.sprite.Sprite):
 
 # log class
 class Log(pygame.sprite.Sprite):
-    def __init__(self, y, direction, background):
+    def __init__(self, y, direction, background, x):
         super().__init__()
         rand = random.randint(0, 5)
         if rand == 0:
@@ -589,10 +628,16 @@ class Log(pygame.sprite.Sprite):
         self.direction = direction
         if self.direction == "left":
             # self.rect.x has to be a little bigger, so that the cars can be deleted in the main code if they are on top of each other
-            self.rect.x = screen.get_width()+random.randint(one_game_unit//5, log_image.get_width())
+            if x == None:
+                self.rect.x = screen.get_width()+random.randint(one_game_unit//5, log_image.get_width())
+            else:
+                self.rect.x = x
         elif self.direction == "right":
             # self.rect.x has to be a little bigger, so that the cars can be deleted in the main code if they are on top of each other
-            self.rect.x = 0 - self.rect.width - random.randint(one_game_unit//5, log_image.get_width())
+            if x == None:
+                self.rect.x = 0 - self.rect.width - random.randint(one_game_unit//5, log_image.get_width())
+            else:
+                self.rect.x = x
         self.has_player = False
         self.initial_x = self.rect.x
         # setting the speed of the log based on the background selected speed for the specific y coordinate
@@ -655,7 +700,8 @@ class Background(pygame.sprite.Sprite):
         if self.type == "grass":
             fill_with_objects(self)
         # adding starting logs or obstacles to the background, this prevents the player from just rushing through the game
-        filling_back(self)
+        if self.type != "grass":
+            filling_back(self)
 
     def draw(self, screen):
         screen.blit(self.image, (self.rect.x, self.rect.y))
@@ -885,18 +931,6 @@ while running:
 
     # drawing the background objects
     background_objects_group.draw(screen)
-
-                # drawing everything
-    #try:
-    #    # drawing the obstacles
-    #    obstacle_group.draw(screen)
-#
-    #    # drawing the logs
-    #    log_group.draw(screen)
-    #except:
-    #    # weirdly enough, this still sometimes happen, maybe when there is too much sprites?
-    #    # at this point I have absolutely no idea why this happens, so I guess I will just have to leave it like this
-    #    pass
 
     # maybe this will fix the issue, or at least make it less visible. It did make it less videspread(now only one obstacle blinks), but it still happens
     # however it is bearable now

@@ -3,6 +3,12 @@ import random
 import tkinter as tk
 import threading
 from pygame import mixer
+import sys
+import os
+if hasattr(sys, '_MEIPASS'):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.abspath(".")
 
 # functions
 # reset function
@@ -102,7 +108,7 @@ def reset():
     change_in_y = 0
 
     # starting the music again
-    mixer.music.load('beethoven-sonata.mp3')
+    mixer.music.load(os.path.join(base_path, 'beethoven-sonata.mp3'))
     mixer.music.play(-1)
 
 # end screen function, currenlty very simple, will be updated later
@@ -126,7 +132,7 @@ def end_screen(death_type):
         other_check_frazes = ["# water jokes", "# car jokes"]
     # trying to read the jokes from the file
     try:
-        with open("jokes.txt", "r") as file:
+        with open(os.path.join(base_path,"jokes.txt"), "r") as file:
             jokes_temp = file.readlines()
             # checking if the file is empty
             if jokes_temp == []:
@@ -231,7 +237,7 @@ def start_screen():
     global running, start_screen_active, invincible
     start_screen_font = pygame.font.Font(None, screen.get_height()//6)
     # starting the music
-    mixer.music.load('main_menu_music.mp3')
+    mixer.music.load(os.path.join(base_path, 'main_menu_music.mp3'))
     mixer.music.play(-1)
     # start screen loop
     while start_screen_active and running:
@@ -247,7 +253,7 @@ def start_screen():
                     # checking play button
                     if screen.get_width()/2 - resized_play_button.get_width()/2 < event.pos[0] < screen.get_width()/2 + resized_play_button.get_width()/2 and screen.get_height()/2 - resized_play_button.get_height()/2 < event.pos[1] < screen.get_height()/2 + resized_play_button.get_height()/2:
                         mixer.music.stop()
-                        mixer.music.load('beethoven-sonata.mp3')
+                        mixer.music.load(os.path.join(base_path, 'beethoven-sonata.mp3'))
                         mixer.music.play(-1)
                         start_screen_active = False
                         reset()
@@ -328,7 +334,7 @@ def scores_screen():
         screen.fill((255, 255, 255))
         # reading the scores from the file
         try:
-            with open("scores.txt", "r") as file:
+            with open(os.path.join(base_path,"scores.txt"), "r") as file:
                 scores = file.readlines()
             file.close()
         except:
@@ -407,7 +413,7 @@ def settings_screen():
     window.title("Settings")
     window.geometry("300x300")
     window.resizable(False, False)
-    window.iconbitmap("settings.ico")
+    window.iconbitmap(os.path.join(base_path, "settings.ico"))
     # creating a label
     label = tk.Label(window, text="Settings", font=("Arial", 20))
     label.pack()
@@ -464,7 +470,7 @@ def write_score():
     global player_name, score
     # first reading the file
     try:
-        with open("scores.txt", "r") as file:
+        with open(os.path.join(base_path,"scores.txt"), "r") as file:
             scores = file.readlines()
         file.close()
     except:
@@ -473,7 +479,7 @@ def write_score():
     scores.append(player_name+","+str(score)+"\n")
     scores = sorted(scores, key=lambda x: int(x.split(",")[1]), reverse=True)
     # writing the scores to the file
-    with open("scores.txt", "w") as file:
+    with open(os.path.join(base_path,"scores.txt"), "w") as file:
         for i in scores:
             file.write(i)
     # closing the file
@@ -684,14 +690,14 @@ class Background(pygame.sprite.Sprite):
         else:
             self.type = type
         if height != None:
-            self.image = pygame.transform.scale(pygame.image.load('grass.png'), (screen.get_width(), height))
+            self.image = pygame.transform.scale(pygame.image.load(os.path.join(base_path,'grass.png')), (screen.get_width(), height))
         else:
             if self.type == "road":
-                self.image = pygame.transform.scale(pygame.image.load('road.png'), (screen.get_width(), screen.get_height()))
+                self.image = pygame.transform.scale(pygame.image.load(os.path.join(base_path,'road.png')), (screen.get_width(), screen.get_height()))
             elif self.type == "water":
-                self.image = pygame.transform.scale(pygame.image.load('water.png'), (screen.get_width(), screen.get_height()))
+                self.image = pygame.transform.scale(pygame.image.load(os.path.join(base_path,'water.png')), (screen.get_width(), screen.get_height()))
             elif self.type == "grass":
-                self.image = pygame.transform.scale(pygame.image.load('grass.png'), (screen.get_width(), screen.get_height()))
+                self.image = pygame.transform.scale(pygame.image.load(os.path.join(base_path,'grass.png')), (screen.get_width(), screen.get_height()))
         self.rect = self.image.get_rect()
         self.rect.x = 0
         if y != None:
@@ -731,57 +737,57 @@ if resizability:
 else:
     screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Frogger")
-icon = pygame.image.load('frog.png')
+icon = pygame.image.load(os.path.join(base_path, 'frog.png'))
 pygame.display.set_icon(icon)
 one_game_unit = int(screen.get_height() / 12)
 
 # setting up sounds
-splash_sound = mixer.Sound('splash_sound.mp3')
-game_over_sound = mixer.Sound('game_over_sound.mp3')
-power_up_pickup_sound = mixer.Sound('powerup_pickedup.mp3')
-car_horn_sound = mixer.Sound('car_horn.mp3')
+splash_sound = mixer.Sound(os.path.join(base_path, 'splash_sound.mp3'))
+game_over_sound = mixer.Sound(os.path.join(base_path, 'game_over_sound.mp3'))
+power_up_pickup_sound = mixer.Sound(os.path.join(base_path, 'powerup_pickedup.mp3'))
+car_horn_sound = mixer.Sound(os.path.join(base_path, 'car_horn.mp3'))
 
 # creating the backgrounds group
 backgrounds_group = pygame.sprite.Group()
 
 # creating a settings button
-settings_button = pygame.image.load('settings.png')
+settings_button = pygame.image.load(os.path.join(base_path, 'settings.png'))
 resized_settings_button = pygame.transform.scale(settings_button, (one_game_unit, one_game_unit))
 
 # creating the player
-player_image = pygame.image.load('frog.png')
+player_image = pygame.image.load(os.path.join(base_path, 'frog.png'))
 resized_player = pygame.transform.scale(player_image, (one_game_unit/1.5, one_game_unit/1.7))
-an_player1 = pygame.image.load('frog1.png')
+an_player1 = pygame.image.load(os.path.join(base_path, 'frog1.png'))
 resized_an_player1 = pygame.transform.scale(an_player1, (one_game_unit/1.5, one_game_unit/1.7))
-an_player2 = pygame.image.load('frog2.png')
+an_player2 = pygame.image.load(os.path.join(base_path, 'frog2.png'))
 resized_an_player2 = pygame.transform.scale(an_player2, (one_game_unit/1.5, one_game_unit/1.7))
 player = Player()
 
 # creating the background objects group
 background_objects_group = pygame.sprite.Group()
 # loading the background objects images
-stump_image = pygame.image.load('stump.png')
+stump_image = pygame.image.load(os.path.join(base_path, 'stump.png'))
 resized_stump = pygame.transform.scale(stump_image, (one_game_unit, one_game_unit))
-flower_image = pygame.image.load('flower.png')
+flower_image = pygame.image.load(os.path.join(base_path, 'flower.png'))
 resized_flower = pygame.transform.scale(flower_image, (one_game_unit,one_game_unit))
-stone_image = pygame.image.load('stone.png')
+stone_image = pygame.image.load(os.path.join(base_path, 'stone.png'))
 resized_stone = pygame.transform.scale(stone_image, (one_game_unit, one_game_unit))
-logs_image = pygame.image.load('background_logs.png')
+logs_image = pygame.image.load(os.path.join(base_path, 'background_logs.png'))
 resized_logs = pygame.transform.scale(logs_image, (one_game_unit, one_game_unit))
-snake_image = pygame.image.load('snake.png')
+snake_image = pygame.image.load(os.path.join(base_path, 'snake.png'))
 resized_snake = pygame.transform.scale(snake_image, (one_game_unit, one_game_unit))
-pond_image = pygame.image.load('pond.png')
+pond_image = pygame.image.load(os.path.join(base_path, 'pond.png'))
 resized_pond = pygame.transform.scale(pond_image, (one_game_unit, one_game_unit))
 
 background_objects= [resized_stump, resized_flower, resized_stone, resized_logs, resized_snake, resized_pond]
 # obstacle image
-obstacle_image = pygame.image.load('temporary_obstacle.png') # they are not temporary anymore, but I am too lazy to change the names
-obstacle_image_red = pygame.image.load('temporary_obstacle_red.png')# they are not temporary anymore, but I am too lazy to change the names
-obstacle_image_yellow = pygame.image.load('temporary_obstacle_yellow.png')# they are not temporary anymore, but I am too lazy to change the names
-obstacle_image_purple = pygame.image.load('temporary_obstacle_purple.png')# they are not temporary anymore, but I am too lazy to change the names
-obstacle_image_pink = pygame.image.load('temporary_obstacle_pink.png')# they are not temporary anymore, but I am too lazy to change the names
-obstacle_image_blue = pygame.image.load('temporary_obstacle_blue.png')# they are not temporary anymore, but I am too lazy to change the names
-obstacle_image_green = pygame.image.load('temporary_obstacle_green.png')# they are not temporary anymore, but I am too lazy to change the names
+obstacle_image = pygame.image.load(os.path.join(base_path,'temporary_obstacle.png')) # they are not temporary anymore, but I am too lazy to change the names
+obstacle_image_red = pygame.image.load(os.path.join(base_path,'temporary_obstacle_red.png'))# they are not temporary anymore, but I am too lazy to change the names
+obstacle_image_yellow = pygame.image.load(os.path.join(base_path,'temporary_obstacle_yellow.png'))# they are not temporary anymore, but I am too lazy to change the names
+obstacle_image_purple = pygame.image.load(os.path.join(base_path,'temporary_obstacle_purple.png'))# they are not temporary anymore, but I am too lazy to change the names
+obstacle_image_pink = pygame.image.load(os.path.join(base_path,'temporary_obstacle_pink.png'))# they are not temporary anymore, but I am too lazy to change the names
+obstacle_image_blue = pygame.image.load(os.path.join(base_path,'temporary_obstacle_blue.png'))# they are not temporary anymore, but I am too lazy to change the names
+obstacle_image_green = pygame.image.load(os.path.join(base_path,'temporary_obstacle_green.png'))# they are not temporary anymore, but I am too lazy to change the names
 resized_obstacles = [pygame.transform.scale(obstacle_image, (one_game_unit*2, one_game_unit)), 
                      pygame.transform.scale(obstacle_image_red, (one_game_unit*2, one_game_unit)), 
                      pygame.transform.scale(obstacle_image_yellow, (one_game_unit*2, one_game_unit)), 
@@ -792,23 +798,23 @@ resized_obstacles = [pygame.transform.scale(obstacle_image, (one_game_unit*2, on
 obstacle_group = pygame.sprite.Group()
 
 # log image
-log_image = pygame.image.load('log.png')
+log_image = pygame.image.load(os.path.join(base_path, 'log.png'))
 resized_log = pygame.transform.scale(log_image, (one_game_unit*2, one_game_unit))
-lilypad_image = pygame.image.load('waterlily.png')
+lilypad_image = pygame.image.load(os.path.join(base_path, 'waterlily.png'))
 resized_lilypad = pygame.transform.scale(lilypad_image, (one_game_unit, one_game_unit))
 water_images = [resized_log, resized_lilypad]
 log_group = pygame.sprite.Group()
 
 # setting up a play button
-play_button = pygame.image.load('play_button.png')
+play_button = pygame.image.load(os.path.join(base_path, 'play_button.png'))
 resized_play_button = pygame.transform.scale(play_button, (one_game_unit*6, one_game_unit*2))
-scores_button = pygame.image.load('scores_button.png')
+scores_button = pygame.image.load(os.path.join(base_path, 'scores_button.png'))
 resized_scores_button = pygame.transform.scale(scores_button, (one_game_unit*6, one_game_unit*2))
-back_arrow = pygame.image.load('back_arrow.png')
+back_arrow = pygame.image.load(os.path.join(base_path, 'back_arrow.png'))
 resized_back_arrow = pygame.transform.scale(back_arrow, (one_game_unit, one_game_unit))
-end_game_button = pygame.image.load('exit_button.png')
+end_game_button = pygame.image.load(os.path.join(base_path, 'exit_button.png'))
 resized_end_game_button = pygame.transform.scale(end_game_button, (one_game_unit*6, one_game_unit*2))
-home_button = pygame.image.load('home_button.png')
+home_button = pygame.image.load(os.path.join(base_path, 'home_button.png'))
 resized_home_button = pygame.transform.scale(home_button, (one_game_unit, one_game_unit))
 
 # setting up a thread for the spawning of obstacles and logs
